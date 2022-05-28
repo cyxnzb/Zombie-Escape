@@ -210,7 +210,7 @@ public ze_user_infected_pre(iVictim, iInfector, iDamage)
 public ze_gamemode_chosen_pre(game_id, bSkipCheck)
 {	
 	// This not round of this gamemode?
-	if (!bSkipCheck) if (random_num(1, get_pcvar_num(g_pCvar_iChance))) return ZE_STOP
+	if (!bSkipCheck) if (random_num(1, get_pcvar_num(g_pCvar_iChance)) != 1) return ZE_STOP
 
 	// Continue starting gamemode.
 	return ZE_CONTINUE
