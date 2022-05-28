@@ -52,7 +52,6 @@ new g_iAliveHumansNum,
 	bool:g_bGameStarted, 
 	bool:g_bIsGameStarted,
 	bool:g_bIsZombie[33], 
-	bool:g_bIsZombieFrozen[33], 
 	bool:g_bZombieFreezeTime, 
 	bool:g_bIsRoundEnding,
 	bool:g_bHSpeedUsed[33], 
@@ -91,7 +90,6 @@ public plugin_natives()
 {
 	register_native("ze_is_user_zombie", "native_ze_is_user_zombie", 1)
 	register_native("ze_is_game_started", "native_ze_is_game_started", 1)
-	register_native("ze_is_zombie_frozen", "native_ze_is_zombie_frozen", 1)
 	
 	register_native("ze_get_round_number", "native_ze_get_round_number", 1)
 	register_native("ze_get_humans_number", "native_ze_get_humans_number", 1)
@@ -322,7 +320,6 @@ public Fw_PlayerSpawn_Post(id)
 		{
 			// Respawn Him As human if we are in freeze time (Zombie Not Chosen yet)
 			Set_User_Human(id)
-			g_bIsZombieFrozen[id] = false
 		}
 		else
 		{
@@ -330,13 +327,11 @@ public Fw_PlayerSpawn_Post(id)
 			{
 				// Zombie Chosen and zombies Frozen, Spawn him as zombie and Freeze Him
 				Set_User_Zombie(id)
-				g_bIsZombieFrozen[id] = true
 			}
 			else
 			{
 				// Respawn him as normal zombie
 				Set_User_Zombie(id)
-				g_bIsZombieFrozen[id] = false
 			}
 		}
 	}
@@ -466,9 +461,6 @@ public Choose_Zombies()
 		Set_User_Zombie(id)
 		set_entvar(id, var_health, flHealth)
 
-		// Set zombie Frozen flag 
-		g_bIsZombieFrozen[id] = true
-
 		// Store IDs of first Zombies in Array.
 		iFirstZombies[iZombies] = id
 
@@ -538,7 +530,6 @@ public ReleaseZombie()
 	{
 		if (is_user_alive(id) && g_bIsZombie[id])
 		{
-			g_bIsZombieFrozen[id] = false
 			rg_reset_maxspeed(id)
 		}
 	}
@@ -1017,16 +1008,6 @@ public native_ze_set_user_human(id)
 public native_ze_is_game_started()
 {
 	return g_bGameStarted
-}
-
-public native_ze_is_zombie_frozen(id)
-{
-	if (!is_user_connected(id) || !g_bIsZombie[id])
-	{
-		return -1;
-	}
-	
-	return g_bIsZombieFrozen[id]
 }
 
 public native_ze_get_round_number()

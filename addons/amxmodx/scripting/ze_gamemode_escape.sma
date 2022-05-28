@@ -51,6 +51,7 @@ new g_iCountdown
 new g_iForwards[FORWARDS]
 new bool:g_bBlockInfection
 new bool:g_bRespawnAsZombie
+new bool:g_bIsZombieFrozen[MAX_PLAYERS+1]
 
 // Dynamic Arrays
 new Array:g_aStartSound
@@ -60,6 +61,12 @@ new Trie:g_tChosenPlayers
 
 // Hook Chain Variable.
 new HookChain:g_pHookTraceAttack
+
+// Forward allows registering natives (called before init).
+public plugin_natives()
+{
+	register_native("ze_is_zombie_frozen", "native_is_zombie_frozen", 1)
+}
 
 // Forward called after server activation.
 public plugin_init()
@@ -169,6 +176,16 @@ public ze_game_started_pre()
 
 	// Disable hook "TraceAttack" to allow bullet damage.
 	DisableHookChain(g_pHookTraceAttack)
+
+	// Reset array.
+	arrayset(g_bIsZombieFrozen, false, sizeof(g_bIsZombieFrozen))
+}
+
+// Forward called every New Round (after gamestarted).
+public ze_game_started()
+{
+	// Get mode.
+	g_iRoundMode = get_pcvar_num(g_pCvar_iMode)
 }
 
 // Forward called when player spawn.
@@ -285,6 +302,7 @@ public ze_gamemode_chosen(game_id)
 		if (!g_iRoundMode)
 		{
 			// Freeze Zombie.
+			g_bIsZombieFrozen[id] = true
 			set_entvar(id, var_flags, (get_entvar(id, var_flags) | FL_FROZEN))
 		}
 
@@ -392,6 +410,7 @@ public releaseZombies()
 			if (ze_is_user_zombie(id))
 			{
 				// Unfreeze all Zombies.
+				g_bIsZombieFrozen[id] = false
 				set_entvar(id, var_flags, (get_entvar(id, var_flags) & ~FL_FROZEN))
 			}
 		}
@@ -424,4 +443,18 @@ public ze_roundend(iWinTeam)
 			ze_disallow_respawn_as_zombie(id)
 		}
 	}
+}
+
+/**
+ * Function of native:
+ */
+public native_is_zombie_frozen(id)
+{
+	// Player not found or not Zombie?
+	if (!is_user_connected(id) || !ze_is_user_zombie(id))
+	{
+		return NULLENT // Return -1
+	}
+
+	return g_bIsZombieFrozen[id] // Return 1 or 0.
 }
