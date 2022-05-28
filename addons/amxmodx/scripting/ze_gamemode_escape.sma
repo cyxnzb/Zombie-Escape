@@ -66,6 +66,7 @@ new HookChain:g_pHookTraceAttack
 public plugin_natives()
 {
 	register_native("ze_is_zombie_frozen", "native_is_zombie_frozen", 1)
+	register_native("ze_remove_zombie_freeze_msg", "native_remove_zombie_freeze_msg", 1)
 }
 
 // Forward called after server activation.
@@ -457,4 +458,16 @@ public native_is_zombie_frozen(id)
 	}
 
 	return g_bIsZombieFrozen[id] // Return 1 or 0.
+}
+
+public native_remove_zombie_freeze_msg()
+{
+	// Check task is exists or not?
+	if (task_exists(TASK_COUNTDOWN))
+	{
+		remove_task(TASK_COUNTDOWN)
+		return true
+	}
+	
+	return false	
 }
