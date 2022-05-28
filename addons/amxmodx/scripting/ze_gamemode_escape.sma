@@ -40,6 +40,8 @@ new g_pCvar_iNoticeMsg
 new g_pCvar_iNoticeColors[3]
 new g_pCvar_iNoticeSound
 new g_pCvar_iSmartRandom
+new g_pCvar_iReleasTime
+new g_pCvar_iFirstZombieHealth
 
 // Global Variables.
 new g_iGame
@@ -70,14 +72,16 @@ public plugin_init()
 	DisableHookChain(g_pHookTraceAttack) // Disable hook "TraceAttack" to allow bullet damage.
 
 	// Cvars.
-	g_pCvar_iMode = register_cvar("ze_escape_mode", "0")
-	g_pCvar_iChance = register_cvar("ze_escape_chance", "20")
-	g_pCvar_iNoticeMsg = register_cvar("ze_escape_notice", "2")
-	g_pCvar_iNoticeColors[Red] = register_cvar("ze_escape_notice_red", "50")
-	g_pCvar_iNoticeColors[Green] = register_cvar("ze_escape_notice_green", "100")
-	g_pCvar_iNoticeColors[Blue] = register_cvar("ze_escape_notice_blue", "255")
-	g_pCvar_iNoticeSound = register_cvar("ze_escape_sounds", "1")
-	g_pCvar_iSmartRandom = register_cvar("ze_smart_random", "1")
+	g_pCvar_iMode 					= register_cvar("ze_escape_mode", "0")
+	g_pCvar_iChance 				= register_cvar("ze_escape_chance", "20")
+	g_pCvar_iNoticeMsg 				= register_cvar("ze_escape_notice", "2")
+	g_pCvar_iNoticeColors[Red] 		= register_cvar("ze_escape_notice_red", "50")
+	g_pCvar_iNoticeColors[Green] 	= register_cvar("ze_escape_notice_green", "100")
+	g_pCvar_iNoticeColors[Blue] 	= register_cvar("ze_escape_notice_blue", "255")
+	g_pCvar_iNoticeSound 			= register_cvar("ze_escape_sounds", "1")
+	g_pCvar_iSmartRandom 			= register_cvar("ze_smart_random", "1")
+	g_pCvar_iReleasTime 			= register_cvar("ze_release_time", "15")
+	g_pCvar_iFirstZombieHealth 		= register_cvar("ze_first_zombies_health", "20000")
 
 	// New gamemode.
 	g_iGame = ze_gamemode_register("Escape")
@@ -89,9 +93,9 @@ public plugin_init()
 	g_tChosenPlayers = TrieCreate()
 
 	// Initialize custom forwards.
-	g_iForwards[FORWARD_ZOMBIE_APPEAR] = CreateMultiForward("ze_zombie_appear", ET_IGNORE)
-	g_iForwards[FORWARD_ZOMBIE_APPEAR_EX] = CreateMultiForward("ze_zombie_appear_ex", ET_IGNORE, FP_STRING, FP_CELL)
-	g_iForwards[FORWARD_ZOMBIE_RELEASE] = CreateMultiForward("ze_zombie_release", ET_IGNORE)
+	g_iForwards[FORWARD_ZOMBIE_APPEAR] 		= CreateMultiForward("ze_zombie_appear", ET_IGNORE)
+	g_iForwards[FORWARD_ZOMBIE_APPEAR_EX] 	= CreateMultiForward("ze_zombie_appear_ex", ET_IGNORE, FP_STRING, FP_CELL)
+	g_iForwards[FORWARD_ZOMBIE_RELEASE] 	= CreateMultiForward("ze_zombie_release", ET_IGNORE)
 
 	// Default Values.
 	g_iSyncMsgHud = CreateHudSyncObj()
@@ -116,10 +120,13 @@ public plugin_precache()
 	// Load start sound from ini file.
 	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "Escape Mode", g_aStartSound)
 
-	new iNum
+	new iArrSize, iNum
+
+	// Get number of sounds in dyn array.
+	iArrSize = ArraySize(g_aStartSound)
 
 	// Dyn array is empty?
-	if (!ArraySize(g_aStartSound))
+	if (!iArrSize)
 	{
 		// Store default sounds in dyn array.
 		for (iNum = 0; iNum < sizeof(g_szStartSound); iNum++)
@@ -129,10 +136,7 @@ public plugin_precache()
 		amx_save_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "Escape Mode", g_aStartSound)
 	}
 
-	new szSound[MAX_SOUND_LENGTH], iArrSize
-
-	// Get number of sounds in dyn array.
-	iArrSize = ArraySize(g_aStartSound)
+	new szSound[MAX_SOUND_LENGTH]
 
 	// Precache Sounds.
 	for (iNum = 0; iNum < iArrSize; iNum++)
@@ -157,6 +161,9 @@ public plugin_precache()
 // Forward called every New Round (Is important to declare it in pre-forward).
 public ze_game_started_pre()
 {
+	// Stop all sounds.
+	StopSound()
+
 	// Remove task.
 	remove_task(TASK_COUNTDOWN)
 
@@ -256,6 +263,9 @@ public ze_gamemode_chosen(game_id)
 	// Get infection ratio.
 	iReqZombies = RequiredZombies()
 
+	// Get health of first Zombies.
+	new Float:flFirstHealth = get_pcvar_float(g_pCvar_iFirstZombieHealth)
+
 	// Repeat finding on required Zombies.
 	while (iZombieNum < iReqZombies)
 	{
@@ -283,6 +293,12 @@ public ze_gamemode_chosen(game_id)
 
 		// Switch player to Zombies team (Infect him).
 		ze_set_user_zombie(id)
+
+		// Set first Zombies specific health.
+		if (flFirstHealth > 0)
+		{
+			set_entvar(id, var_health, flFirstHealth)
+		}
 
 		// New Zombie.
 		iFirstZombies[iZombieNum++] = id
@@ -332,8 +348,8 @@ public ze_gamemode_chosen(game_id)
 	g_bRespawnAsZombie = true // Respawn any player Zombie.
 	g_bBlockInfection = true // Block Infection event.
 
-	// Get countdown first.
-	g_iCountdown = 5
+	// Get release time first.
+	g_iCountdown = get_pcvar_num(g_pCvar_iReleasTime)
 
 	// Release time task.
 	set_task(1.0, "delayReleaseZombie", TASK_COUNTDOWN, "", 0, "b")
