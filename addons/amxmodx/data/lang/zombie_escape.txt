@@ -62,6 +62,8 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rLevel\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
+NOTICE_ESCAPE = Zombies Appeared^nRun!!
+
 [bp]
 NO_ENOUGH_PLAYERS = !tFalta jogadores!y. !tNecessario!y: !t%i!y.
 RUN_NOTICE = Pronto pra Fugir?. Falta apenas %i segundos !
@@ -125,6 +127,8 @@ NO_EXTRA_ITEMS = !tNão há itens extras disponíveis para você!y.
 ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rLevel\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
+
+NOTICE_ESCAPE = 
 
 [pl]
 NO_ENOUGH_PLAYERS = !tBrak wystarczjacej liczby graczy!y. !tWymagana liczba!y: !t%i!y.
@@ -190,6 +194,8 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rPoziom\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
+NOTICE_ESCAPE = 
+
 [bs]
 NO_ENOUGH_PLAYERS = !tNema dovoljno igraca!y. !tPotrebno!y: !t%i!y.
 RUN_NOTICE = Spremite se za bijeg. Bjezite nakon %i sekundi !
@@ -253,6 +259,8 @@ NO_EXTRA_ITEMS = !tDodaci trenutno nisu dostupni!y.
 ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rLevel\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
+
+NOTICE_ESCAPE = Zombiji su se pojavili^nbježi!!
 
 [tr]
 NO_ENOUGH_PLAYERS = !tYeterli Oyuncular Yok!y.  !t%i Gereklidir!y.
@@ -318,6 +326,8 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rSeviye\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
+NOTICE_ESCAPE = Zombiler ortaya çıktı^nKoşun!!
+
 [ru]
 NO_ENOUGH_PLAYERS = !tНедостаточно игроков!y. !tНужно!y: !t%i!y.
 RUN_NOTICE = Все готовы. Забег начинается через %i секунд !
@@ -382,6 +392,8 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rУровень\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
+NOTICE_ESCAPE = Появились зомби^nБежать!!
+
 [ro]
 NO_ENOUGH_PLAYERS = !tPrea putini jucatori!y. !tJucatori necesari!y: !t%i!y.
 RUN_NOTICE = Fiti gata pentru evadare. Fugiti Dupa %i Secunde !
@@ -445,3 +457,5 @@ NO_EXTRA_ITEMS = !tNiciun obiect extra disponibil pentru tine acum!y.
 ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rNivel\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
+
+NOTICE_ESCAPE = 
