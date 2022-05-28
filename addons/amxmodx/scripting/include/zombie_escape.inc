@@ -99,6 +99,8 @@ forward ze_user_infected(iVictim, iInfector);
 *
 * @return		Returns here useless, it will not affect the real appearing event.
 *
+* @note 		This forward never called, If no chosen Zombies.
+*				Try use ze_zombie_appear_ex(const iFirstZombies[], iZombieNum)
 */
 forward ze_zombie_appear();
 
@@ -298,7 +300,7 @@ native ze_set_user_zombie(id);
 * Description:	Set user to zombie team.
 *
 * @param id			Client index.
-* @param iInfector	Infector index, 0 = Server.
+* @param iInfector	Infector index.
 *
 * @return			true  | If set successfully
 *					false | If this player not connected
