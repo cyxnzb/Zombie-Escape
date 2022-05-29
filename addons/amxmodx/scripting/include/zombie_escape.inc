@@ -220,6 +220,16 @@ forward ze_select_item_post(id, iItemid, bIgnoreCost);
 */
 forward ze_player_disconnect(id);
 
+/**
+ * Description:		Called when player spawn.
+ *
+ * @param id 		Client index.
+ *
+ * @return 			Returns here useless.
+ *
+ */
+forward ze_player_spawn_post(id);
+
 // Natives
 
 /*
