@@ -438,7 +438,7 @@ public ze_roundend(iWinTeam)
 	for (new id = 1; id <= MaxClients; id++)
 	{
 		// Player is a alive?
-		if (is_user_alive(id))
+		if (is_user_connected(id))
 		{
 			// Disallow spawning player Zombie.
 			ze_disallow_respawn_as_zombie(id)
