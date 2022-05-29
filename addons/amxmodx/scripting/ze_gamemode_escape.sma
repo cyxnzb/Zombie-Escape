@@ -42,6 +42,7 @@ new g_pCvar_iNoticeSound
 new g_pCvar_iSmartRandom
 new g_pCvar_iReleasTime
 new g_pCvar_iFirstZombieHealth
+new g_pCvar_iRespawnAsZombie
 
 // Global Variables.
 new g_iGame
@@ -90,6 +91,7 @@ public plugin_init()
 	g_pCvar_iSmartRandom 			= register_cvar("ze_smart_random", "1")
 	g_pCvar_iReleasTime 			= register_cvar("ze_release_time", "15")
 	g_pCvar_iFirstZombieHealth 		= register_cvar("ze_first_zombies_health", "20000")
+	g_pCvar_iRespawnAsZombie 		= register_cvar("ze_respawn_as_zombie", "1")
 
 	// New gamemode.
 	g_iGame = ze_gamemode_register("Escape")
@@ -270,6 +272,9 @@ public ze_gamemode_chosen(game_id)
 		PlaySound(0, szSound)
 	}
 
+	// Respawn any player Zombie.
+	g_bRespawnAsZombie = (get_pcvar_num(g_pCvar_iRespawnAsZombie) > 0) ? true : false
+
 	// Check smart random choose is enabled or not.
 	new bool:bSmartRandom = get_pcvar_num(g_pCvar_iSmartRandom) ? true : false
 
@@ -278,7 +283,7 @@ public ze_gamemode_chosen(game_id)
 	// Get all alive players and save players index in array.
 	get_players(iPlayers, iAliveCount, "ah")
 
-	// Get infection ratio.
+	// Get number of required Zombies.
 	iReqZombies = RequiredZombies()
 
 	// Get health of first Zombies.
@@ -364,7 +369,6 @@ public ze_gamemode_chosen(game_id)
 		EnableHookChain(g_pHookTraceAttack)
 	}
 
-	g_bRespawnAsZombie = true // Respawn any player Zombie.
 	g_bBlockInfection = true // Block Infection event.
 
 	// Get release time first.
