@@ -6,6 +6,7 @@ enum _:TOTAL_FORWARDS
 	FORWARD_NONE = 0,
 	FORWARD_ROUNDEND,
 	FORWARD_HUMANIZED,
+	FORWARD_SPAWN_POST,
 	FORWARD_PRE_INFECTED,
 	FORWARD_INFECTED,
 	FORWARD_GAME_STARTED_PRE,
@@ -126,6 +127,7 @@ public plugin_init()
 	register_logevent("Round_End", 2, "1=Round_End")
 	
 	// Create Forwards
+	g_iForwards[FORWARD_NONE] = EOS
 	g_iForwards[FORWARD_ROUNDEND] = CreateMultiForward("ze_roundend", ET_IGNORE, FP_CELL)
 	g_iForwards[FORWARD_HUMANIZED] = CreateMultiForward("ze_user_humanized", ET_IGNORE, FP_CELL)
 	g_iForwards[FORWARD_PRE_INFECTED] = CreateMultiForward("ze_user_infected_pre", ET_CONTINUE, FP_CELL, FP_CELL, FP_CELL)
@@ -133,6 +135,7 @@ public plugin_init()
 	g_iForwards[FORWARD_GAME_STARTED_PRE] = CreateMultiForward("ze_game_started_pre", ET_CONTINUE)
 	g_iForwards[FORWARD_GAME_STARTED] = CreateMultiForward("ze_game_started", ET_IGNORE)
 	g_iForwards[FORWARD_DISCONNECT] = CreateMultiForward("ze_player_disconnect", ET_CONTINUE, FP_CELL)
+	g_iForwards[FORWARD_SPAWN_POST] = CreateMultiForward("ze_player_spawn_post", ET_IGNORE, FP_CELL)
 	
 	// Registering Messages
 	register_message(get_user_msgid("TeamScore"), "Message_Teamscore")
@@ -276,6 +279,9 @@ public Fw_RestMaxSpeed_Post(id)
 
 public Fw_PlayerSpawn_Post(id)
 {	
+	// Execute forward ze_player_spawn_post(id).
+	ExecuteForward(g_iForwards[FORWARD_SPAWN_POST], _/* Ignore return value */, id)
+
 	if (!g_bGameStarted)
 	{
 		// Force All player to be Humans if Game not started yet
@@ -293,6 +299,9 @@ public Fw_PlayerSpawn_Post(id)
 			// Respawn him as zombie
 			Set_User_Zombie(id)
 		}
+
+		// Reset Variable.
+		g_bRespawnAsZombie[id] = false
 	}
 }
 
