@@ -8,9 +8,6 @@ enum _:TOTAL_FORWARDS
 	FORWARD_HUMANIZED,
 	FORWARD_PRE_INFECTED,
 	FORWARD_INFECTED,
-	FORWARD_ZOMBIE_APPEAR,
-	FORWARD_ZOMBIE_APPEAR_EX,
-	FORWARD_ZOMBIE_RELEASE,
 	FORWARD_GAME_STARTED_PRE,
 	FORWARD_GAME_STARTED,
 	FORWARD_DISCONNECT
@@ -21,10 +18,7 @@ new g_iForwards[TOTAL_FORWARDS], g_iFwReturn
 // Tasks IDs
 enum
 {
-	TASK_COUNTDOWN = 1100,
-	TASK_COUNTDOWN2,
-	TASK_SCORE_MESSAGE,
-	ZOMBIES_SPEED,
+	TASK_SCORE_MESSAGE = 1100,
 	ROUND_TIME_LEFT
 }
 
@@ -40,9 +34,6 @@ enum
 new g_iAliveHumansNum, 
 	g_iAliveZombiesNum, 
 	g_iRoundTime, 
-	g_iCountDown, 
-	g_iReleaseNotice, 
-	g_iMaxClients, 
 	g_iHumansScore, 
 	g_iZombiesScore, 
 	g_iRoundNum,
@@ -51,8 +42,7 @@ new g_iAliveHumansNum,
 	g_iUserGravity[33],
 	bool:g_bGameStarted, 
 	bool:g_bIsGameStarted,
-	bool:g_bIsZombie[33], 
-	bool:g_bZombieFreezeTime, 
+	bool:g_bIsZombie[33],  
 	bool:g_bIsRoundEnding,
 	bool:g_bHSpeedUsed[33], 
 	bool:g_bZSpeedUsed[33],
@@ -61,6 +51,7 @@ new g_iAliveHumansNum,
 	bool:g_bIsGravityUsed[33],
 	bool:g_bEnteredNotChoosed[33],
 	bool:g_bDisconnectHumanWin,
+	bool:g_bRespawnAsZombie[33],
 	Float:g_flReferenceTime,
 	Float:g_flUserKnockback[33]
 
@@ -70,17 +61,14 @@ new	g_pCvarHumanSpeedFactor,
 	g_pCvarHumanHealth, 
 	g_pCvarZombieSpeed, 
 	g_pCvarZombieGravity,
-	g_pCvarZombieReleaseTime, 
 	g_pCvarFreezeTime, 
 	g_pCvarRoundTime, 
 	g_pCvarReqPlayers, 
 	g_pCvarZombieHealth, 
-	g_pCvarFirstZombiesHealth,
 	g_pCvarZombieKnockback, 
 	g_pCvarScoreMessageType, 
 	g_pCvarColors[3],
 	g_pCvarRoundEndDelay,
-	g_pCvarSmartRandom,
 	g_pCvarWinMessageType
 	
 // Trie's.
@@ -111,11 +99,9 @@ public plugin_natives()
 	
 	register_native("ze_set_user_gravity", "native_ze_set_user_gravity", 1)
 	register_native("ze_reset_user_gravity", "native_ze_reset_user_gravity", 1)
-	
-	register_native("ze_remove_zombie_freeze_msg", "native_ze_remove_zombie_freeze_msg", 1)
 
-	register_native("ze_force_start_gamemode", "native_ze_force_start_gamemode", 0)
-	register_native("ze_is_gamemode_started", "native_ze_is_gamemode_started", 0)
+	register_native("ze_allow_respawn_as_zombie", "native_ze_allow_respawn_as_zombie", 1)
+	register_native("ze_disallow_respawn_as_zombie", "native_ze_disallow_respawn_as_zombie", 1)
 }
 
 public plugin_init()
@@ -144,15 +130,9 @@ public plugin_init()
 	g_iForwards[FORWARD_HUMANIZED] = CreateMultiForward("ze_user_humanized", ET_IGNORE, FP_CELL)
 	g_iForwards[FORWARD_PRE_INFECTED] = CreateMultiForward("ze_user_infected_pre", ET_CONTINUE, FP_CELL, FP_CELL, FP_CELL)
 	g_iForwards[FORWARD_INFECTED] = CreateMultiForward("ze_user_infected", ET_IGNORE, FP_CELL, FP_CELL)
-	g_iForwards[FORWARD_ZOMBIE_APPEAR] = CreateMultiForward("ze_zombie_appear", ET_IGNORE)
-	g_iForwards[FORWARD_ZOMBIE_APPEAR_EX] = CreateMultiForward("ze_zombie_appear_ex", ET_IGNORE, FP_STRING, FP_CELL)
-	g_iForwards[FORWARD_ZOMBIE_RELEASE] = CreateMultiForward("ze_zombie_release", ET_IGNORE)
 	g_iForwards[FORWARD_GAME_STARTED_PRE] = CreateMultiForward("ze_game_started_pre", ET_CONTINUE)
 	g_iForwards[FORWARD_GAME_STARTED] = CreateMultiForward("ze_game_started", ET_IGNORE)
 	g_iForwards[FORWARD_DISCONNECT] = CreateMultiForward("ze_player_disconnect", ET_CONTINUE, FP_CELL)
-	
-	// Hud Messages
-	g_iReleaseNotice = CreateHudSyncObj()
 	
 	// Registering Messages
 	register_message(get_user_msgid("TeamScore"), "Message_Teamscore")
@@ -169,11 +149,9 @@ public plugin_init()
 	g_pCvarZombieSpeed = register_cvar("ze_zombie_speed", "350.0")
 	g_pCvarZombieGravity = register_cvar("ze_zombie_gravity", "640")
 	g_pCvarZombieHealth = register_cvar("ze_zombie_health", "10000")
-	g_pCvarFirstZombiesHealth = register_cvar("ze_first_zombies_health", "20000")
 	g_pCvarZombieKnockback = register_cvar("ze_zombie_knockback", "300.0")
 	
 	// General Cvars
-	g_pCvarZombieReleaseTime = register_cvar("ze_release_time", "15")
 	g_pCvarFreezeTime = register_cvar("ze_freeze_time", "20")
 	g_pCvarRoundTime = register_cvar("ze_round_time", "9.0")
 	g_pCvarReqPlayers = register_cvar("ze_required_players", "2")
@@ -182,11 +160,7 @@ public plugin_init()
 	g_pCvarColors[Green] = register_cvar("ze_score_message_green", "100")
 	g_pCvarColors[Blue] = register_cvar("ze_score_message_blue", "0")
 	g_pCvarRoundEndDelay = register_cvar("ze_round_end_delay", "5")
-	g_pCvarSmartRandom = register_cvar("ze_smart_random", "1")
 	g_pCvarWinMessageType = register_cvar("ze_winmessage_type", "0")
-
-	// Static Values
-	g_iMaxClients = get_member_game(m_nMaxPlayers)
 	
 	// Check Round Time to Terminate it
 	set_task(1.0, "Check_RoundTimeleft", ROUND_TIME_LEFT, _, _, "b")
@@ -282,13 +256,6 @@ public Fw_RestMaxSpeed_Post(id)
 		}
 		else // Zombie.
 		{
-			if (g_bZombieFreezeTime)
-			{
-				// Freeze Zombie.
-				set_entvar(id, var_maxspeed, 1.0)
-				return HC_CONTINUE
-			}
-
 			// Zombie have custom maxspeed?
 			if (g_bZSpeedUsed[id])
 			{
@@ -316,23 +283,15 @@ public Fw_PlayerSpawn_Post(id)
 	}
 	else
 	{
-		if (get_member_game(m_bFreezePeriod))
+		if (!g_bRespawnAsZombie[id])
 		{
-			// Respawn Him As human if we are in freeze time (Zombie Not Chosen yet)
+			// Respawn him as human.
 			Set_User_Human(id)
 		}
 		else
 		{
-			if (g_bZombieFreezeTime)
-			{
-				// Zombie Chosen and zombies Frozen, Spawn him as zombie and Freeze Him
-				Set_User_Zombie(id)
-			}
-			else
-			{
-				// Respawn him as normal zombie
-				Set_User_Zombie(id)
-			}
+			// Respawn him as zombie
+			Set_User_Zombie(id)
 		}
 	}
 }
@@ -340,10 +299,7 @@ public Fw_PlayerSpawn_Post(id)
 public New_Round()
 {
 	// Remove All tasks in the New Round
-	remove_task(TASK_COUNTDOWN)
-	remove_task(TASK_COUNTDOWN2)
 	remove_task(TASK_SCORE_MESSAGE)
-	remove_task(ZOMBIES_SPEED)
 	
 	if (g_bGameStarted)
 	{
@@ -365,19 +321,7 @@ public New_Round()
 		return // Block the execution of the blew code 
 	}
 	
-	if (g_iRoundNum == 1)
-	{
-		// 2 is Hardcoded Value, It's Fix for the countdown to work correctly first round
-		g_iCountDown = get_member_game(m_iIntroRoundTime) - 2
-	}
-	else
-	{
-		// 3 is Hardcoded Value, It's Fix for the countdown to work correctly after first round
-		g_iCountDown = get_member_game(m_iIntroRoundTime) - 3
-	}
-	
-	// Game Already started, Countdown now started
-	set_task(1.0, "Countdown_Start", TASK_COUNTDOWN, _, _, "b")
+	// Game Already started
 	ze_colored_print(0, "%L", LANG_PLAYER, "READY_TO_RUN")
 	ExecuteForward(g_iForwards[FORWARD_GAME_STARTED], g_iFwReturn)
 	
@@ -391,7 +335,7 @@ public New_Round()
 public Score_Message(TaskID)
 {
 	// If value is 0, there is nothing to do for this case this means CVAR is disabled
-	switch(get_pcvar_num(g_pCvarScoreMessageType))
+	switch (get_pcvar_num(g_pCvarScoreMessageType))
 	{
 		case 1: // DHUD
 		{
@@ -406,135 +350,6 @@ public Score_Message(TaskID)
 	}
 }
 
-public Countdown_Start(TaskID)
-{
-	// Check if the players Disconnected and there is only one player then remove all messages, and stop tasks (+Stop sounds)
-	if (!g_bGameStarted)
-	{
-		StopSound()
-		remove_task(TaskID) // Remove the task
-		return
-	}
-	
-	if (!g_iCountDown)
-	{
-		Choose_Zombies()
-		remove_task(TaskID) // Remove the task
-		return // Block the execution of the blew code
-	}
-	
-	set_hudmessage(random(256), random(256), random(256), -1.0, 0.21, 0, 0.8, 0.8)
-	show_hudmessage(0, "%L", LANG_PLAYER, "RUN_NOTICE", g_iCountDown--)
-}
-
-public Choose_Zombies()
-{
-	new iFirstZombies[MAX_CLIENTS], iZombies, id, iAliveCount
-	new szAuthId[34], iReqZombies
-	
-	// Get total alive players and required players
-	iAliveCount  = GetAllAlivePlayersNum()
-	iReqZombies = RequiredZombies()
-
-	// Check smart random is enabled or not.
-	new bool:bSmartRandom = get_pcvar_num(g_pCvarSmartRandom) ? true : false
-
-	// Get health of first Zombies.
-	new Float:flHealth = get_pcvar_float(g_pCvarFirstZombiesHealth)
-
-	// Loop till we find req players
-	while(iZombies < iReqZombies)
-	{
-		id = GetRandomAlive(random_num(1, iAliveCount))
-		
-		if (!is_user_alive(id) || g_bIsZombie[id])
-			continue
-		
-		// Get authid (SteamID) of the player.
-		get_user_authid(id, szAuthId, charsmax(szAuthId))
-
-		// Check if CVAR enabled and if player in the Trie, it means he chosen previous round so skip him this round
-		if (bSmartRandom && TrieKeyExists(g_tChosenPlayers, szAuthId))
-			continue
-
-		// Infect player.
-		Set_User_Zombie(id)
-		set_entvar(id, var_health, flHealth)
-
-		// Store IDs of first Zombies in Array.
-		iFirstZombies[iZombies] = id
-
-		// New Zombie.
-		iZombies++
-	}
-	
-	if (iZombies > 0)
-	{
-		// Freeze all Zombies.
-		g_bZombieFreezeTime = true
-
-		// Execute forward ze_zombie_appear().
-		ExecuteForward(g_iForwards[FORWARD_ZOMBIE_APPEAR])
-
-		// Execute forward ze_zombie_appear_ex(const iZombies[], iZombieNum)
-		ExecuteForward(g_iForwards[FORWARD_ZOMBIE_APPEAR_EX], _/* No return value */, iFirstZombies, iZombies)
-	}
-	
-	if (bSmartRandom)
-	{
-		// Clear the Trie first
-		TrieClear(g_tChosenPlayers)
-		
-		// Add steamid of chosen zombies, so we don't choose them next round again (using steamid means it support reconnect)
-		for (id = 1; id <= g_iMaxClients; id++)
-		{
-			if(!is_user_connected(id) || !g_bIsZombie[id])
-				continue
-			
-			get_user_authid(id, szAuthId, charsmax(szAuthId))
-			
-			TrieSetCell(g_tChosenPlayers, szAuthId, 0)
-		}
-	}
-	
-	// Gamemode is started.
-	g_bIsGameStarted = true
-
-	// 2 is Hardcoded Value, It's Fix for the countdown to work correctly
-	g_iCountDown = get_pcvar_num(g_pCvarZombieReleaseTime) - 2
-	
-	set_task(1.0, "ReleaseZombie_CountDown", TASK_COUNTDOWN2, _, _, "b")
-}
-
-public ReleaseZombie_CountDown(TaskID)
-{
-	if (!g_iCountDown)
-	{
-		ReleaseZombie()
-		remove_task(TaskID)
-		return
-	}
-	
-	// Release Hud Message
-	set_hudmessage(255, 255, 0, -1.0, 0.21, 1, 2.0, 2.0)
-	ShowSyncHudMsg(0, g_iReleaseNotice, "%L", LANG_PLAYER, "ZOMBIE_RELEASE", g_iCountDown--)
-}
-
-public ReleaseZombie()
-{
-	ExecuteForward(g_iForwards[FORWARD_ZOMBIE_RELEASE], g_iFwReturn)
-	
-	g_bZombieFreezeTime = false
-	
-	for(new id = 1; id <= g_iMaxClients; id++)
-	{
-		if (is_user_alive(id) && g_bIsZombie[id])
-		{
-			rg_reset_maxspeed(id)
-		}
-	}
-}
-
 public Fw_TraceAttack_Pre(iVictim, iAttacker, Float:flDamage, Float:flDirection[3], iTracehandle, bitsDamageType)
 {
 	if (iVictim == iAttacker || !is_user_connected(iVictim) || !is_user_connected(iAttacker))
@@ -543,10 +358,6 @@ public Fw_TraceAttack_Pre(iVictim, iAttacker, Float:flDamage, Float:flDirection[
 	// Attacker and Victim is in same teams? Skip code blew
 	if (get_member(iAttacker, m_iTeam) == get_member(iVictim, m_iTeam))
 		return HC_CONTINUE
-	
-	// In freeze time? Skip all other plugins (Skip the real trace attack event)
-	if (g_bZombieFreezeTime)
-		return HC_SUPERCEDE
 	
 	if (g_bIsZombie[iAttacker])
 	{
@@ -654,7 +465,7 @@ public Check_RoundTimeleft()
 {
 	new Float:flRoundTimeLeft = (g_flReferenceTime + float(g_iRoundTime)) - get_gametime()
 	
-	if (floatround(flRoundTimeLeft) == 0 && !g_bIsRoundEnding && !get_member_game(m_bFreezePeriod))
+	if (floatround(flRoundTimeLeft) == 0 && !g_bIsRoundEnding)
 	{
 		// Round is Ending
 		g_bIsRoundEnding = true
@@ -1148,32 +959,6 @@ public native_ze_reset_user_gravity(id)
 	return true
 }
 
-public native_ze_remove_zombie_freeze_msg()
-{
-	if (task_exists(TASK_COUNTDOWN2))
-	{
-		remove_task(TASK_COUNTDOWN2)
-		return true
-	}
-	
-	return false
-}
-
-public native_ze_force_start_gamemode()
-{
-	// Gamemode is already started?
-	if (g_bIsGameStarted)
-		return false
-
-	// Remove countdown.
-	if (task_exists(TASK_COUNTDOWN))
-		remove_task(TASK_COUNTDOWN)
-
-	// Start gamemode.
-	Choose_Zombies()
-	return true
-}
-
 public native_ze_is_gamemode_started()
 {
 	if (g_bIsGameStarted)
@@ -1197,4 +982,24 @@ public native_ze_set_user_zombie_ex(id, iInfector)
 	
 	Set_User_Zombie(id, iInfector, 0.0)
 	return true;
+}
+
+public native_ze_allow_respawn_as_zombie(id)
+{
+	// Player not found?
+	if (!is_user_connected(id))
+		return false
+
+	g_bRespawnAsZombie[id] = true
+	return true
+}
+
+public native_ze_disallow_respawn_as_zombie(id)
+{
+	// Player not found?
+	if (!is_user_connected(id))
+		return false
+
+	g_bRespawnAsZombie[id] = false
+	return true
 }
