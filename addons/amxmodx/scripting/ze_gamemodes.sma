@@ -58,6 +58,9 @@ public plugin_init()
 	// Load plugin.
 	register_plugin("[ZE] Gamemodes Manager", ZE_VERSION, AUTHORS)
 
+	// Events.
+	register_event("TextMsg", "fw_MapRestart_Event", "a", "2=#Game_Commencing", "2=#Game_will_restart_in", "2=#Round_Draw")
+
 	// Cvars.
 	g_pCvar_iGamemodeDelay 			= register_cvar("ze_gamemodes_delay", "10")
 	g_pCvar_iFirstDefaultGame 		= register_cvar("ze_gamemodes_firstround", "1")
@@ -98,6 +101,13 @@ public ze_game_started()
 
 	// New Task, for gamemode countdown.
 	set_task(1.0, "show_CountDown", TASK_COUNTDOWN, "", 0, "b")
+}
+
+// Hook called when round restart.
+public fw_MapRestart_Event()
+{
+	// Remove task (stop countdown).
+	remove_task(TASK_COUNTDOWN)
 }
 
 public show_CountDown(iTask)
@@ -231,6 +241,13 @@ public pausePlugins()
 		// Pause plugin.
 		pause("ac", szFileName)
 	}
+}
+
+// Forward called when round over.
+public ze_roundend(iWinTeam)
+{
+	// Remove task.
+	remove_task(TASK_COUNTDOWN)
 }
 
 /**
