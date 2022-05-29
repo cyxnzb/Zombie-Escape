@@ -936,3 +936,25 @@ native ze_show_user_hud_info(id);
 *					false | If this player not connected.
 */
 native ze_hide_user_hud_info(id);
+
+/**
+ * Description: 	Allow spawning player Zombie.
+ *
+ * @param id 		Client index.
+ *
+ * @return 			true  | If allowed successfully.
+ *					false | If player not connected.
+ *
+ */
+native ze_allow_respawn_as_zombie(id);
+
+/**
+ * Description: 	Disallow spawning player Zombie.
+ *
+ * @param id 		Client index. 
+ *
+ * @return 			true  | If disallowed successfully.
+ *					false | If player not connected.		
+ *
+ */
+native ze_disallow_respawn_as_zombie(id);
