@@ -39,6 +39,7 @@ new g_pCvar_iChance
 new g_pCvar_iNoticeMsg
 new g_pCvar_iNoticeColors[3]
 new g_pCvar_iNoticeSound
+new g_pCvar_iReleaseHud
 new g_pCvar_iSmartRandom
 new g_pCvar_iReleasTime
 new g_pCvar_iFirstZombieHealth
@@ -87,6 +88,7 @@ public plugin_init()
 	g_pCvar_iNoticeColors[Red] 		= register_cvar("ze_escape_notice_red", "50")
 	g_pCvar_iNoticeColors[Green] 	= register_cvar("ze_escape_notice_green", "100")
 	g_pCvar_iNoticeColors[Blue] 	= register_cvar("ze_escape_notice_blue", "255")
+	g_pCvar_iReleaseHud 			= register_cvar("ze_releasetime_mode", "1")
 	g_pCvar_iNoticeSound 			= register_cvar("ze_escape_sounds", "1")
 	g_pCvar_iSmartRandom 			= register_cvar("ze_smart_random", "1")
 	g_pCvar_iReleasTime 			= register_cvar("ze_release_time", "15")
@@ -248,7 +250,7 @@ public ze_gamemode_chosen(game_id)
 		{
 			// Show HUD for all clients.
 			set_hudmessage(get_pcvar_num(g_pCvar_iNoticeColors[Red]), get_pcvar_num(g_pCvar_iNoticeColors[Green]), get_pcvar_num(g_pCvar_iNoticeColors[Blue]), HUD_X, HUD_Y, 1, 5.0, 5.0, 0.1, 0.1)
-			ShowSyncHudMsg(0, g_iSyncMsgHud, "%L", LANG_PLAYER, "NOTICE_ESCAPE")
+			show_hudmessage(0, "%L", LANG_PLAYER, "NOTICE_ESCAPE")
 		}
 		case 3: // Director HUD
 		{
@@ -392,7 +394,21 @@ public delayReleaseZombie(iTask)
 	}
 
 	// Show release time HUD.
-	client_print(0, print_center, "%L", LANG_PLAYER, "ZOMBIE_RELEASE", g_iCountdown--)
+	switch (get_pcvar_num(g_pCvar_iReleaseHud))
+	{
+		case 0: // Text.
+			client_print(0, print_center, "%L", LANG_PLAYER, "ZOMBIE_RELEASE", g_iCountdown--)
+		case 1: // HUD
+		{
+			set_hudmessage(255, 255, 0, -1.0, 0.35, 0, 1.0, 1.0, 0.0, 0.0)
+			ShowSyncHudMsg(0, g_iSyncMsgHud, "%L", LANG_PLAYER, "ZOMBIE_RELEASE", g_iCountdown--)
+		}
+		case 2: // DHUD
+		{
+			set_dhudmessage(255, 255, 0, -1.0, 0.35, 0, 1.0, 1.0, 0.0, 0.0)
+			show_dhudmessage(0, "%L", LANG_PLAYER, "ZOMBIE_RELEASE", g_iCountdown--)			
+		}
+	}
 }
 
 public releaseZombies()
@@ -423,7 +439,7 @@ public releaseZombies()
 		// Disable hook "TraceAttack" to allow bullet damage.
 		DisableHookChain(g_pHookTraceAttack)
 	}
-	else /* New Mod, Zombies are will appear in way between Humans */
+	else /* New Mod, Zombies are will appear in way between Humans without freeze time */
 	{
 		// Enable infection.
 		g_bBlockInfection = false
