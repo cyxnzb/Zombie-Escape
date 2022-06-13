@@ -253,6 +253,10 @@ public ze_gamemode_chosen_pre(game_id, bSkipCheck)
 // Forward called when gamemode chosen.
 public ze_gamemode_chosen(game_id)
 {
+	// The game hasn't started yet?
+	if (!ze_is_game_started())
+		return
+
 	// Notice mode.
 	switch (get_pcvar_num(g_pCvar_iNoticeMsg))
 	{
