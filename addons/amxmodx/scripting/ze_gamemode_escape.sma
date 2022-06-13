@@ -203,6 +203,18 @@ public ze_player_spawn_post(id)
 	}
 }
 
+// Forward called when player disconnect.
+public ze_player_disconnect(id)
+{
+	new szAuthId[34]
+
+	// Get AuthId of player.
+	get_user_authid(id, szAuthId, charsmax(szAuthId))
+
+	// Remove AuthId of player from Trie.
+	TrieDeleteKey(g_tChosenPlayers, szAuthId)
+}
+
 // Hook called when player Trace attack.
 public fw_TraceAttack_Pre(iVictim, iAttacker, Float:flDamage, Float:vDirection[3], pTraceHandle, iDamageType)
 {
