@@ -121,6 +121,14 @@ public fw_MapRestart_Event()
 
 public show_CountDown(iTask)
 {
+	// Game has not started yet? 
+	if (!ze_is_game_started())
+	{
+		// Stop countdown.
+		remove_task(iTask)
+		return		
+	}
+
 	// Countdown is over?
 	if (g_iCountdown <= 0)
 	{
