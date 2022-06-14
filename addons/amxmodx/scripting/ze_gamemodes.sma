@@ -39,7 +39,9 @@ new g_iCountdown
 new g_iSyncMsgHud
 new g_iDefaultGame
 new g_iFwResult
+new g_iGameCurrent
 new g_iForwards[FORWARDS]
+new bool:g_bIsGameStarted
 
 // Dynamic Arrays.
 new Array:g_aGameName
@@ -50,6 +52,12 @@ public plugin_natives()
 {
 	register_native("ze_gamemode_register", "native_gamemode_register", 0)
 	register_native("ze_gamemode_set_default", "native_gamemode_set_default", 0)
+	register_native("ze_gamemode_get_current", "native_gamemode_get_current", 0)
+	register_native("ze_gamemode_get_name", "native_gamemode_get_name", 0)
+	register_native("ze_gamemode_get_id", "native_gamemode_get_id", 0)
+	register_native("ze_gamemode_get_count", "native_gamemode_get_count", 0)
+	register_native("ze_gamemode_start", "native_gamemode_start", 0)
+	register_native("ze_is_gamemode_started", "native_is_gamemode_started", 0)
 }
 
 // Forward called after server activation.
@@ -80,6 +88,7 @@ public plugin_init()
 
 	// Static Values.
 	g_iDefaultGame = ZE_WRONG_GAME
+	g_iGameCurrent = ZE_WRONG_GAME
 	g_iSyncMsgHud = CreateHudSyncObj()
 }
 
@@ -88,6 +97,9 @@ public ze_game_started_pre()
 {
 	// Remove task.
 	remove_task(TASK_COUNTDOWN)	
+
+	// Reset Var.
+	g_iGameCurrent = ZE_WRONG_GAME
 }
 
 // Forward called after game started.
@@ -181,6 +193,8 @@ public chooseGame()
 				}
 				
 				// Execute forward ze_gamemode_chosen(game_id).
+				g_iGameCurrent = iGame
+				g_bIsGameStarted = true // Has game started.
 				ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* No return value */, iGame)
 				return // Gamemode has started.
 			}
@@ -226,6 +240,10 @@ public chooseDefault()
 		
 		// Execute forward ze_gamemode_chosen(game_id).
 		ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* Ignore return value */, g_iDefaultGame)
+	
+		// Gamemode has started.
+		g_bIsGameStarted = true
+		g_iGameCurrent = g_iDefaultGame
 	}
 }
 
@@ -246,6 +264,10 @@ public pausePlugins()
 // Forward called when round over.
 public ze_roundend(iWinTeam)
 {
+	// Round over.
+	g_bIsGameStarted = false
+	g_iGameCurrent = ZE_WRONG_GAME
+
 	// Remove task.
 	remove_task(TASK_COUNTDOWN)
 }
@@ -305,11 +327,126 @@ public native_gamemode_set_default(plugin_id, params_num)
 	if ((iGame >= g_iGameCount) || (iGame < 0))
 	{
 		// Print error on server console.
-		log_error(AMX_ERR_NATIVE, "[ZE] Invalid gamemode (%d)", iGame)
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid game mode (%d)", iGame)
 		return false
 	}
 
 	// Set default gamemode.
 	g_iDefaultGame = iGame	
 	return true
+}
+
+public native_gamemode_get_current()
+{
+	// Return gamemode id.
+	return g_iGameCurrent
+}
+
+public native_gamemode_get_name(plugin_id, params_num)
+{
+	// Get a game mode ID.
+	new iGame = get_param(1)
+
+	// Gamemode is invalid?
+	if ((iGame >= g_iGameCount) || (iGame < 0))
+	{
+		// Print error on server console.
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid game mode (%d)", iGame)
+		return false
+	}
+
+	new szName[MAX_NAME_LENGTH]
+
+	// Get a game mode name from dynamic array.
+	ArrayGetString(g_aGameName, iGame, szName, charsmax(szName))
+
+	// Store game mode in new buffer.
+	set_string(2, szName, get_param(3))
+	return true
+}
+
+public native_gamemode_get_id(plugin_id, params_num)
+{
+	// Get a game mode name.
+	new szName[MAX_NAME_LENGTH]
+	get_string(1, szName, charsmax(szName))
+
+	// No name entered?
+	if (strlen(szName) < 1)
+	{
+		// Print error on server console.
+		log_error(AMX_ERR_NATIVE, "[ZE] You can't get game mode id without name !")
+		return ZE_WRONG_GAME
+	}
+
+	// Find for name.
+	new szTemp[MAX_NAME_LENGTH]
+	for (new iNum = 0; iNum < g_iGameCount; iNum++)
+	{
+		// Get game mode name from dynamic array.
+		ArrayGetString(g_aGameName, iNum, szTemp, charsmax(szTemp))
+
+		// Game mode is exists?
+		if (equali(szTemp, szName))
+			return iNum // Return game mode id.
+	}
+
+	// Game mode name not found.
+	return ZE_WRONG_GAME
+}
+
+public native_gamemode_get_count()
+{
+	// Return number of game modes.
+	return g_iGameCount
+}
+
+public native_gamemode_start(plugin_id, paras_num)
+{
+	// Get a game mode id.
+	new iGame = get_param(1)
+
+	// Gamemode is invalid?
+	if ((iGame >= g_iGameCount) || (iGame < 0))
+	{
+		// Print error on server console.
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid game mode (%d)", iGame)
+		return false
+	}
+
+	// Remove countdown task.
+	remove_task(TASK_COUNTDOWN)
+
+	new szFileName[64]
+
+	// Get filename of gamemode from dyn array.
+	ArrayGetString(g_aGameFile, iGame, szFileName, charsmax(szFileName))
+
+	// Unpause plugin first
+	unpause("c", szFileName)
+
+	// Execute forward ze_gamemode_chosen_pre(game_id, bSkipCheck) and get return value.
+	ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN_PRE], g_iFwResult, iGame, true)
+
+	// Check return value is 1 or above?
+	if (g_iFwResult >= ZE_STOP)
+	{
+		// Re-pause plugin.
+		pause("ac", szFileName)
+		return false // fail start game mode.
+	}
+	
+	// Execute forward ze_gamemode_chosen(game_id).
+	ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* Ignore return value */, iGame)
+
+	// Gamemode has started.
+	g_bIsGameStarted = true
+	g_iGameCurrent = iGame
+	return true
+}
+
+public native_is_gamemode_started()
+{
+	// Return 1 or 0
+	return g_bIsGameStarted
 }
