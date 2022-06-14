@@ -128,7 +128,7 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rLevel\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
-NOTICE_ESCAPE = 
+NOTICE_ESCAPE = Zombies apareceram^nfujam!!
 
 [pl]
 NO_ENOUGH_PLAYERS = !tBrak wystarczjacej liczby graczy!y. !tWymagana liczba!y: !t%i!y.
@@ -194,7 +194,7 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rPoziom\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
-NOTICE_ESCAPE = 
+NOTICE_ESCAPE = Pojawiły się zombie^nBiegać
 
 [bs]
 NO_ENOUGH_PLAYERS = !tNema dovoljno igraca!y. !tPotrebno!y: !t%i!y.
@@ -458,4 +458,4 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rNivel\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
-NOTICE_ESCAPE = 
+NOTICE_ESCAPE = Au apărut zombi^nAlerga
