@@ -1,8 +1,5 @@
 #include <zombie_escape>
 
-native ze_gamemode_register(const szName[]);
-native ze_gamemode_set_default(game_id);
-
 // Constants.
 const MAX_SOUND_LENGTH = 64
 const TASK_COUNTDOWN = 3000
@@ -110,7 +107,7 @@ public plugin_init()
 
 	// Initialize custom forwards.
 	g_iForwards[FORWARD_ZOMBIE_APPEAR] 		= CreateMultiForward("ze_zombie_appear", ET_IGNORE)
-	g_iForwards[FORWARD_ZOMBIE_APPEAR_EX] 	= CreateMultiForward("ze_zombie_appear_ex", ET_IGNORE, FP_STRING, FP_CELL)
+	g_iForwards[FORWARD_ZOMBIE_APPEAR_EX] 	= CreateMultiForward("ze_zombie_appear_ex", ET_IGNORE, FP_ARRAY, FP_CELL)
 	g_iForwards[FORWARD_ZOMBIE_RELEASE] 	= CreateMultiForward("ze_zombie_release", ET_IGNORE)
 
 	// Default Values.
