@@ -515,56 +515,49 @@ public Check_AlivePlayers()
 	// Game Started? (There is at least 2 players Alive?)
 	if (g_bGameStarted)
 	{
+		// Get number of Humans and Zombies.
+		new iHumansNum 	= get_member_game(m_iNumCT)
+		new iZombiesNum = get_member_game(m_iNumTerrorist)
+
+		// Get number of alive Humans and Zombies.
+		new iAliveZombiesNum = GetAlivePlayersNum(CS_TEAM_T)
+		new iAliveHumansNum  = GetAlivePlayersNum(CS_TEAM_CT)
+
 		// Get the required number of players.
 		new iReqPlayers = get_pcvar_num(g_pCvarReqPlayers)
 
-		// We are in freeze time?
-		if (get_member_game(m_bFreezePeriod))
+		// Required players not found?
+		if ((iHumansNum + iZombiesNum) < iReqPlayers)
 		{
-			// Humans alive number = 1 and no zombies?
-			if (g_iAliveHumansNum < iReqPlayers)
-			{
-				// Game started false again
-				g_bGameStarted = false
-			}
+			// Stop game.
+			g_bGameStarted = false
 		}
-		else // Not freeze time?
+		else
 		{
-			// Variables
-			new iAllZombiesNum = get_member_game(m_iNumTerrorist),
-			iAllHumansNum = get_member_game(m_iNumCT),
-			iDeadZombiesNum = GetDeadPlayersNum(CsTeams:TEAM_TERRORIST),
-			iDeadHumansNum = GetDeadPlayersNum(CsTeams:TEAM_CT)
-	
-			// Alive humans number = 1 and no zombies at all, And no dead humans?
-			if (g_iAliveHumansNum < iReqPlayers && iDeadHumansNum == 0 && iAllZombiesNum == 0)
+			// All Zombies disconnected from the server?
+			if (iHumansNum && !iZombiesNum)
 			{
-				// Game started is false and humans wins (Escape Success)
-				g_bGameStarted = false
-				g_bDisconnectHumanWin = true
-				Finish_Round(ZE_TEAM_HUMAN, false, true)
+				// Finish round and make Humans winners.
+				Finish_Round(ZE_TEAM_HUMAN)
+				return // Block execute rest of codes.
+			}
+			else if (!iHumansNum && iZombiesNum) // All Humans disconnected from the server?
+			{
+				// Finish round and make Zombie winners.
+				Finish_Round(ZE_TEAM_ZOMBIE)	
+				return // Block execute rest of codes.			
 			}
 			
-			// Alive zombies number = 1 and no humans at all, And no dead zombies?
-			else if (g_iAliveZombiesNum < iReqPlayers && iDeadZombiesNum == 0 && iAllHumansNum == 0)
+			// There no alive Humans?
+			if (iAliveHumansNum && !iAliveZombiesNum)
 			{
-				// Game started is false and zombies wins (Escape Fail)
-				g_bGameStarted = false
-				Finish_Round(ZE_TEAM_ZOMBIE, false, true)
+				// Finish round and make Humans winners.
+				Finish_Round(ZE_TEAM_HUMAN)			
 			}
-			
-			// Humans number more than 1 and no zombies?
-			else if (g_iAliveHumansNum >= iReqPlayers && g_iAliveZombiesNum == 0 && !g_bIsRoundEnding)
+			else if (!iAliveHumansNum && iAliveZombiesNum) // There no alive Zombies?
 			{
-				// Then Escape success as there is no Zombies
-				Finish_Round(ZE_TEAM_HUMAN, false, true)
-			}
-			
-			// Zombies number more than 1 and no humans?
-			else if (g_iAliveZombiesNum >= iReqPlayers && g_iAliveHumansNum == 0 && !g_bIsRoundEnding)
-			{
-				// Then Escape Fail as there is no humans
-				Finish_Round(ZE_TEAM_ZOMBIE, false, true)
+				// Finish round and make Zombie winners.
+				Finish_Round(ZE_TEAM_ZOMBIE)	
 			}
 		}
 	}
