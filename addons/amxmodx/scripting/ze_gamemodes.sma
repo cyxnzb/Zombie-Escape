@@ -1,8 +1,5 @@
 #include <zombie_escape>
 
-// Gamemodes return value.
-#define ZE_WRONG_GAME -1
-
 // Constants.
 const TASK_COUNTDOWN = 2022
 const GAME_CHANCE = 2
