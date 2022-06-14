@@ -64,37 +64,20 @@ public plugin_precache()
 public plugin_init()
 {
 	register_plugin("[ZE] Sound Countdown", ZE_VERSION, AUTHORS)
-	
-	// Map restart event
-	register_event("TextMsg", "Map_Restart", "a", "2=#Game_Commencing", "2=#Game_will_restart_in", "2=#Round_Draw")
 }
 
 public ze_game_started()
 {
-	if (ze_get_round_number() == 1)
-	{
-		// 2 is Hardcoded Value, It's Fix for the countdown to work correctly first round
-		g_iCountDown = get_member_game(m_iIntroRoundTime) - 2
-	}
-	else
-	{
-		// 3 is Hardcoded Value, It's Fix for the countdown to work correctly after first round
-		g_iCountDown = get_member_game(m_iIntroRoundTime) - 3
-	}
+	// Get gamemode delay
+	g_iCountDown = get_cvar_num("ze_gamemodes_delay") 
 	
 	set_task(1.0, "Countdown_Start", TASK_COUNTDOWN, _, _, "b")
 }
 
 public Countdown_Start()
 {
-	// Check gamemode is started or not yet?
-	if (ze_is_gamemode_started())
-	{
-		remove_task(TASK_COUNTDOWN) // Remove the task
-		return // Block the execution of the blew code	
-	}
-
-	if ((g_iCountDown - 1 < 0) || !ze_is_game_started())
+	// Check game mode has started or not yet?
+	if ((g_iCountDown - 1 < 0) || !ze_is_game_started() || ze_is_gamemode_started())
 	{
 		remove_task(TASK_COUNTDOWN) // Remove the task
 		return // Block the execution of the blew code
@@ -114,11 +97,5 @@ public Countdown_Start()
 public ze_roundend(WinTeam)
 {
 	// At round end, remove countdown task to block interference next round
-	remove_task(TASK_COUNTDOWN)
-}
-
-public Map_Restart()
-{
-	// At map restart, remove countdown task to block interference next rounds
 	remove_task(TASK_COUNTDOWN)
 }
