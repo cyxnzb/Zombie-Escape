@@ -42,7 +42,6 @@ new g_iAliveHumansNum,
 	g_iZSpeedSet[33],
 	g_iUserGravity[33],
 	bool:g_bGameStarted, 
-	bool:g_bIsGameStarted,
 	bool:g_bIsZombie[33],  
 	bool:g_bIsRoundEnding,
 	bool:g_bHSpeedUsed[33], 
@@ -337,7 +336,6 @@ public New_Round()
 	// Round Starting
 	g_bIsRoundEnding = false
 	g_bEndCalled = false
-	g_bIsGameStarted = false
 }
 
 // Score Message Task
@@ -959,13 +957,6 @@ public native_ze_reset_user_gravity(id)
 	set_entvar(id, var_gravity, float(g_bIsZombie[id] ? get_pcvar_num(g_pCvarZombieGravity):get_pcvar_num(g_pCvarHumanGravity)) / 800.0)
 
 	return true
-}
-
-public native_ze_is_gamemode_started()
-{
-	if (g_bIsGameStarted)
-		return true
-	return false
 }
 
 public native_ze_set_user_zombie_ex(id, iInfector)
