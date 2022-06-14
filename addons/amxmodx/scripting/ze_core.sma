@@ -754,6 +754,9 @@ public Map_Restart()
 {
 	// Add Delay To help Rest Scores if player kill himself, and there no one else him so round draw (Delay needed)
 	set_task(0.1, "Reset_Score_Message")
+
+	// Execute forward ze_roundend(WinTeam).
+	ExecuteForward(g_iForwards[FORWARD_ROUNDEND], _/* Ignore return value */, 0)
 }
 
 public Reset_Score_Message()
