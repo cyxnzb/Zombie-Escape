@@ -37,6 +37,9 @@ enum
 // Max Extra-Items
 #define MAX_EXTRA_ITEMS 60
 
+// Game mode return value.
+#define ZE_WRONG_GAME -1
+
 // Forwards
 
 /*
@@ -229,6 +232,31 @@ forward ze_player_disconnect(id);
  *
  */
 forward ze_player_spawn_post(id);
+
+/**
+ * Description:			Called before game mode chosen.
+ *
+ * @param game_id 		game mode id.
+ * @param bSkipCheck 	True when game mode is started by a native.
+ *
+ * @return 				ZE_STOP 	| Prevent choosing a game mode.
+ *						ZE_CONTINUE | Continue choosing a game mode.
+ *
+ * @note 				If a game mode is not chosen, 
+ *						the default game mode will be chosen.
+ *
+ */
+forward ze_gamemode_chosen_pre(game_id, bSkipCheck);
+
+/**
+ * Description:		Called when game mode chosen.
+ *
+ * @param game_id 	game mode id.
+ *
+ * @return 			Returns here useless.
+ *
+ */
+forward ze_gamemode_chosen(game_id);
 
 // Natives
 
@@ -906,28 +934,6 @@ native ze_is_starting_sounds_enabled(id);
 native ze_is_ambiance_sounds_enabled(id);
 
 /*
-* Description:		Force start gamemode and remove countdown.
-*
-* @noparam
-*
-* @return			true  | If set successfully
-*					false | If sounds disabled.
-*
-*/
-native ze_force_start_gamemode();
-
-/*
-* Description:		Check gamemode is started or not yet.
-*
-* @noparam
-*
-* @return			true  | If gamemode is started.
-*					false | Otherwise.
-*
-*/
-native ze_is_gamemode_started();
-
-/*
 * Description:		Show HUDs info for player.
 *
 * @param 			Client index
@@ -968,3 +974,98 @@ native ze_allow_respawn_as_zombie(id);
  *
  */
 native ze_disallow_respawn_as_zombie(id);
+
+/**
+ * Description:		Registers a new game mode.
+ *
+ * @param szName[]	Game mode name.
+ * 
+ * @return 			A game mode ID, or ZE_WRONG_GAME on failure.
+ *
+ * @note 			Max length of game mode name is 32 characters.
+ *
+ * @error 			If game mode name is already exists, or game mode without name.
+ *
+ */
+native ze_gamemode_register(const szName[]);
+
+/**
+ * Description:		Sets a default game mode.
+ *
+ * @param game_id 	A valid game mode ID.
+ *
+ * @return 			true  | If set successfully.
+ *					false | Otherwise.
+ *
+ * @error 			If game mode ID is not a valid.
+ *
+ */
+native ze_gamemode_set_default(const game_id);
+
+/**
+ * Description: 	Gets a current game mode.
+ *
+ * @noparam
+ *
+ * @return 			A game mode ID, or ZE_WRONG_GAME if game mode not chosen yet.
+ *
+ * @note 			ZE_WRONG_GAME is -1.
+ */
+native ze_gamemode_get_current();
+
+/**
+ * Description:		Gets a game mode's name.
+ *
+ * @param szName[] 	The buffer to store string in.
+ * @param iLen 		Character size of the output buffer.
+ *
+ * @return 			true  | If successfully.
+ *					false | Otherwise.
+ *
+ * @error 			If a game mode ID is invalid.
+ *
+ */
+native ze_gamemode_get_name(const game_id, szName[], iLen);
+
+/**
+ * Description: 	Gets a game mode's ID.
+ *
+ * @param szName[] 	Game mode name to look for.
+ *
+ * @return 			A game mode ID, ZE_WRONG_GAME if not found.
+ *
+ */
+native ze_gamemode_get_id(const szName[]);
+
+/**
+ * Description: 	Get number of registered game modes.
+ *
+ * @noparam
+ *
+ * @return 			Number of registered game modes.
+ *
+ */
+native ze_gamemode_get_count();
+
+/**
+ * Description: 	Forces a game mode to start and stop countdown.
+ *
+ * @param game_id 	A valid game mode ID.
+ *
+ * @return 			ture  | If started successfully.
+ *					false | If game mode can't start.
+ *
+ * @error 			If a game mode ID is invalid.
+ *
+ */
+native ze_gamemode_start(const game_id);
+
+/**
+ * Description: 	Check game mode has started or not yet.
+ *
+ * @noparam
+ *
+ * @return 			true  | If game mode starts.
+ *					false | If no game mode starts.
+ */
+native ze_is_gamemode_started();
