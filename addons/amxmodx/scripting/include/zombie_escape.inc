@@ -17,6 +17,9 @@
 *						Escapers-Zone.net
 */
 
+// Settings file.
+#define ZE_SETTING_RESOURCES "zombie_escape.ini"
+
 // Team constants, use them in ze_roundend() forward 
 enum
 {
