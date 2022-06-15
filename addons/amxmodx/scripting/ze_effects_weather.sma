@@ -1,8 +1,5 @@
 #include <zombie_escape>
 
-// Settings file
-new const ZE_SETTING_RESOURCES[] = "zombie_escape.ini"
-
 // Default Values (Important in case of stupid user delete the .ini File)
 new g_iRain = 0
 new g_iSnow = 0
@@ -43,9 +40,9 @@ public plugin_precache()
 	if (g_iFog != 0)
 	{
 		// Create the Fog Entity
-		new iEnt = engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_fog"))
+		new iEnt = rg_create_entity("env_fog", true)
 		
-		if (pev_valid(iEnt))
+		if (is_entity(iEnt))
 		{
 			// Set The fog
 			Set_KeyValue(iEnt, "density", g_szFogDensity, "env_fog")
@@ -55,11 +52,11 @@ public plugin_precache()
 	
 	// Rain
 	if (g_iRain != 0)
-		engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_rain"))
+		rg_create_entity("env_rain", true)
 	
 	// Snow
 	if (g_iSnow != 0)
-		engfunc(EngFunc_CreateNamedEntity, engfunc(EngFunc_AllocString, "env_snow"))
+		rg_create_entity("env_snow", true)
 	
 	// Sky
 	Precache_Sky(szSkyName)
