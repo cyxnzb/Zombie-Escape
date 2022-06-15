@@ -1,154 +1,92 @@
-#define ZE_PREFIX "!y[!gZombie Escape!y] "
+#include <amxmodx>
+#include <reapi>
 
-// Print Color Chat message, This stock Supports ML
-stock ze_colored_print(const target, const message[], any:...)
+// Constants.
+const msg_Damage = 71
+const msg_DeathMsg = 83
+const msg_ScoreAttrib = 84
+const msg_ScoreInfo = 85
+const msg_AmmoPickup = 91
+const msg_ScreenFade = 98
+
+// Chat Prefix.
+#define ZE_PREFIX "[!gZombie Escape!y] "
+
+/**
+ * Print colored message on chat for specific player or all players.
+ *
+ * @param id		Client index, 0 = everyone.
+ * @param message 	Formatting rules.
+ * @param ...		Variable number of formatting parameters.
+ *
+ * @noreturn
+ *
+ */
+stock ze_colored_print(const id, const message[], any:...)
 {
-	static buffer[512], msg_SayText = 0
-	if( !msg_SayText ) msg_SayText = get_user_msgid("SayText") 
-	
-	// Send to everyone
-	if (!target)
+	static szMsg[512];
+	vformat(szMsg, charsmax(szMsg), message, 3)
+	format(szMsg, charsmax(szMsg), "%s %s", ZE_PREFIX, szMsg);
+	replace_string(szMsg, charsmax(szMsg), "!y", "^1"); // Green color.
+	replace_string(szMsg, charsmax(szMsg), "!t", "^3"); // Team color.
+	replace_string(szMsg, charsmax(szMsg), "!g", "^4"); // Normal color.
+
+	// Print message for all clients.
+	if (id == 0)
 	{
-		static player, maxplayers, argscount
-		maxplayers = get_member_game(m_nMaxPlayers)
-		argscount = numargs()
-		
-		for (player = 1; player <= maxplayers; player++)
-		{
-			// Not connected
-			if (!is_user_connected(player))
-				continue;
-			
-			// Remember changed arguments
-			static arg_index, changed_args[20], changedcount // [20] = max LANG_PLAYER occurencies	
-			changedcount = 0
-			
-			// Replace LANG_PLAYER with player id
-			for (arg_index = 2; arg_index < argscount; arg_index++)
-			{
-				if (getarg(arg_index) == LANG_PLAYER && arg_index + 1 < argscount)
-				{
-					// Check if next param string is a registered language translation
-					static lang_key[64], arg_subindex
-					arg_subindex = 0
-					while ((lang_key[arg_subindex] = getarg(arg_index + 1, arg_subindex++))) { /* keep looping */ }
-					if (GetLangTransKey(lang_key) != TransKey_Bad)
-					{
-						setarg(arg_index, 0, player)
-						changed_args[changedcount++] = arg_index
-						arg_index++ // skip next argument since we know it's a translation key
-					}
-				}
-			}
-			
-			// Format message for player (+add ZE prefix)
-			vformat(buffer, charsmax(buffer), message, 3)
-			format(buffer, charsmax(buffer), "%s%s", ZE_PREFIX, buffer)
-			
-			replace_all(buffer, charsmax(buffer), "!g", "^x04"); // Green Color  
-			replace_all(buffer, charsmax(buffer), "!y", "^x01"); // Yellow Color  
-			replace_all(buffer, charsmax(buffer), "!t", "^x03"); // Team Color 
-			
-			// Send it
-			message_begin(MSG_ONE_UNRELIABLE, msg_SayText, _, player)
-			write_byte(player)
-			write_string(buffer)
-			message_end()
-			
-			// Replace back player id's with LANG_PLAYER
-			for (arg_index = 0; arg_index < changedcount; arg_index++)
-				setarg(changed_args[arg_index], 0, LANG_PLAYER)
-		}
+		// Print colored message for all clients.
+		client_print_color(0, print_team_default, szMsg)
 	}
-	// Send to specific target
 	else
 	{
-		// Format message for player (+add ZE prefix)
-		vformat(buffer, charsmax(buffer), message, 3)
-		format(buffer, charsmax(buffer), "%s%s", ZE_PREFIX, buffer)
-		
-		replace_all(buffer, charsmax(buffer), "!g", "^x04"); // Green Color  
-		replace_all(buffer, charsmax(buffer), "!y", "^x01"); // Yellow Color  
-		replace_all(buffer, charsmax(buffer), "!t", "^x03"); // Team Color 
-			
-		// Send it
-		message_begin(MSG_ONE, msg_SayText, _, target)
-		write_byte(target)
-		write_string(buffer)
-		message_end()
+		// Player not found?
+		if (!is_user_connected(id))
+		{
+			// Print error on server console.
+			log_error(AMX_ERR_NOTFOUND, "[ZE] Invalid Player id (%d)", id)
+			return
+		}
+
+		// Print colored message for all clients.
+		client_print_color(id, print_team_default, szMsg)		
 	}
 }
 
-// Return number of alive players from a team
+/**
+ * Returns the number of alive players in specific team.
+ *
+ * @param iTeam 	Team CS_TEAM_T or CS_TEAM_CT.
+ *
+ */
 stock GetAlivePlayersNum(CsTeams:iTeam)
 {
 	new iTAliveNum
-	for(new i = 1; i <= get_member_game(m_nMaxPlayers) ; i++)
+
+	// Get the number of all alive players in specific team.
+	switch (iTeam)
 	{
-		if (!is_user_connected(i))
-			continue
-		
-		if(is_user_alive(i) && get_member(i, m_iTeam) == iTeam)
-			iTAliveNum++
+		case CS_TEAM_T:
+			get_players("", iTAliveNum, "ae", "T")
+		case CS_TEAM_CT:
+			get_players("", iTAliveNum, "ae", "CT")
 	}
 	return iTAliveNum
 }
 
-// Return number of connected players from a team
-stock GetTeamPlayersNum(CsTeams:iTeam)
-{
-	new iTAliveNum
-	for(new i = 1; i <= get_member_game(m_nMaxPlayers) ; i++)
-	{
-		if (!is_user_connected(i))
-			continue
-		
-		if(is_user_connected(i) && get_member(i, m_iTeam) == iTeam)
-			iTAliveNum++
-	}
-	return iTAliveNum
-}
-
-// Return number of non-alive players from a team
-stock GetDeadPlayersNum(CsTeams:iTeam)
-{
-	new iTAliveNum
-	for(new i = 1; i <= get_member_game(m_nMaxPlayers) ; i++)
-	{
-		if (!is_user_connected(i))
-			continue
-		
-		if(!is_user_alive(i) && get_member(i, m_iTeam) == iTeam)
-			iTAliveNum++
-	}
-	return iTAliveNum
-}
-
-// Return number of all alive players
+/**
+ * Returns the number of all alive players.
+ */
 stock GetAllAlivePlayersNum()
 {
+	// Get number of all alive players.
 	new iAliveAll
-	for(new i = 1; i <= get_member_game(m_nMaxPlayers) ; i++)
-	{
-		if(is_user_alive(i))
-			iAliveAll++
-	}
+	get_players("", iAliveAll, "a")
 	return iAliveAll
 }
 
-// Return number of all connected players
-stock GetAllPlayersNum()
-{
-	new iAll
-	for(new i = 1; i <= get_member_game(m_nMaxPlayers) ; i++)
-	{
-		if(is_user_connected(i))
-			iAll++
-	}
-	return iAll
-}
-
-// Return Number of required zombies
+/**
+ * Returns the number of required Zombies.
+ */
 stock RequiredZombies()
 {
 	switch(GetAllAlivePlayersNum())
@@ -161,35 +99,41 @@ stock RequiredZombies()
 	return 0
 }
 
-// Choose Random Target
-stock GetRandomAlive(target_index)
+/**
+ * Set player map light style.
+ *
+ * @param id 				Client index.
+ * @param szMapLightStyle	Map light style characters (a..z) a = darkest | z = brightest
+ *
+ * @noreturn
+ *
+ */
+stock Set_MapLightStyle(id, const szMapLightStyle[])
 {
-	new iAlive, id
-	
-	for (id = 1; id <= get_member_game(m_nMaxPlayers); id++)
-	{
-		if (is_user_alive(id))
-			iAlive++
-		
-		if (iAlive == target_index)
-			return id
-	}
-	return -1
-}
-
-// Set Player Map Light Style
-stock Set_MapLightStyle(iIndex, const szMapLightStyle[])
-{
-	message_begin(MSG_ONE, SVC_LIGHTSTYLE, {0, 0, 0}, iIndex)
+	message_begin(MSG_ONE, SVC_LIGHTSTYLE, .player = id)
 	write_byte(0)
 	write_string(szMapLightStyle)
 	message_end()
 }
 
-// Set Player Nightvision
-stock Set_NightVision(iIndex, iDuration, iHoldTime, iFlags, iRed, iGreen, iBlue, iAlpha)
+/**
+ * Set a player fade screen.
+ *
+ * @param id 			Client index.
+ * @param iDuration		Duration of fade.
+ * @param iHoldTime 	Hold time.
+ * @param iFlags 		Fade type.
+ * @param iRed 			Red color (0..255)
+ * @param iGreen		Green color (0..255)
+ * @param iBlue 		Blue color (0..255)
+ * @param iAlpha 		Fade brightness (0..255)
+ *
+ * @noreturn
+ *
+ */
+stock Set_NightVision(id, iDuration = 0, iHoldTime = 0, iFlags = 0x0000, iRed = 0, iGreen = 0, iBlue = 0, iAlpha = 0)
 {
-	message_begin(MSG_ONE, get_user_msgid("ScreenFade"), {0, 0, 0}, iIndex)
+	message_begin(MSG_ONE, msg_ScreenFade, .player = id)
 	write_short(iDuration)
 	write_short(iHoldTime)
 	write_short(iFlags)
@@ -200,82 +144,131 @@ stock Set_NightVision(iIndex, iDuration, iHoldTime, iFlags, iRed, iGreen, iBlue,
 	message_end()
 }
 
-// Set Zombie Knockback
+/**
+ * Set a Zombie knockback.
+ *
+ * @param ent 			Client index.
+ * @param VicOrigin[3] 	Origin of player.
+ * @param speed 		Speed.
+ * @param type 			Knockback type.
+ *
+ * @noreturn
+ *
+ */
 stock Set_Knockback(ent, Float:VicOrigin[3], Float:speed, type)
 {
-	static Float:fl_Velocity[3]
-	static Float:EntOrigin[3]
+	static Float:fl_Velocity[3], Float:EntOrigin[3], Float:distance_f, Float:fl_Time
 	
 	get_entvar(ent, var_origin, EntOrigin)
-	static Float:distance_f
 	distance_f = get_distance_f(EntOrigin, VicOrigin)
+	fl_Time = distance_f / speed
 	
-	new Float:fl_Time = distance_f / speed
-	
-	if (type == 1)
+	switch (type)
 	{
-		fl_Velocity[0] = ((VicOrigin[0] - EntOrigin[0]) / fl_Time) * 1.5
-		fl_Velocity[1] = ((VicOrigin[1] - EntOrigin[1]) / fl_Time) * 1.5
-		fl_Velocity[2] = (VicOrigin[2] - EntOrigin[2]) / fl_Time		
-	}
-	else if (type == 2)
-	{
-		fl_Velocity[0] = ((EntOrigin[0] - VicOrigin[0]) / fl_Time) * 1.5
-		fl_Velocity[1] = ((EntOrigin[1] - VicOrigin[1]) / fl_Time) * 1.5
-		fl_Velocity[2] = (EntOrigin[2] - VicOrigin[2]) / fl_Time
+		case 1:
+		{
+			fl_Velocity[0] = ((VicOrigin[0] - EntOrigin[0]) / fl_Time) * 1.5
+			fl_Velocity[1] = ((VicOrigin[1] - EntOrigin[1]) / fl_Time) * 1.5
+			fl_Velocity[2] = (VicOrigin[2] - EntOrigin[2]) / fl_Time		
+		}
+		case 2:
+		{
+			fl_Velocity[0] = ((EntOrigin[0] - VicOrigin[0]) / fl_Time) * 1.5
+			fl_Velocity[1] = ((EntOrigin[1] - VicOrigin[1]) / fl_Time) * 1.5
+			fl_Velocity[2] = (EntOrigin[2] - VicOrigin[2]) / fl_Time
+		}
 	}
 	
 	set_entvar(ent, var_velocity, fl_Velocity)
 }
 
-// Update Player Frags and Deaths
+/**
+ * Update Player Frags and Deaths.
+ * 
+ * @param iAttacker 	Attacker index, 0 = Skip.
+ * @param iVictim 		Victim index, 0 = Skip.
+ * @param iFrags 		Frags.
+ * @param iDeaths 		Deaths.
+ * @param iScoreboard 	Update frags and deaths on scoreboard (1 | 0).
+ *
+ * @noreturn
+ *
+ */
 stock UpdateFrags(iAttacker, iVictim, iFrags, iDeaths, iScoreboard)
 {
-	if (!is_user_connected(iAttacker) || !is_user_connected(iVictim))
-		return
-	
-	// Set attacker frags
-	set_entvar(iAttacker, var_frags, float(pev(iAttacker, pev_frags) + iFrags))
-	
-	// Set victim deaths
-	set_member(iVictim, m_iDeaths, get_member(iVictim, m_iDeaths) + iDeaths)
-	
-	// Update scoreboard with attacker and victim info
-	if (iScoreboard)
+	if (is_user_connected(iAttacker))
 	{
-		message_begin(MSG_BROADCAST, get_user_msgid("ScoreInfo"))
-		write_byte(iAttacker) // id
-		write_short(floatround(get_entvar(iAttacker, var_frags))) // frags
-		write_short(get_member(iAttacker, m_iDeaths)) // deaths
-		write_short(0) // class?
-		write_short(get_member(iAttacker, m_iTeam)) // team
-		message_end()
-		
-		message_begin(MSG_BROADCAST, get_user_msgid("ScoreInfo"))
-		write_byte(iVictim) // id
-		write_short(floatround(get_entvar(iVictim, var_frags))) // frags
-		write_short(get_member(iVictim, m_iDeaths)) // deaths
-		write_short(0) // class?
-		write_short(get_member(iVictim, m_iTeam)) // team
-		message_end()
+		// Get frags of attacker.
+		new iSetFrags = floatround(get_entvar(iAttacker, var_frags))
+	
+		// Set attacker frags
+		set_entvar(iAttacker, var_frags, float(iSetFrags + iFrags))	
+	
+		// Update frags in Scoreboard.
+		if (iScoreboard)
+		{
+			message_begin(MSG_BROADCAST, msg_ScoreInfo)
+			write_byte(iAttacker) // id
+			write_short(iSetFrags + iFrags) // frags
+			write_short(get_member(iAttacker, m_iDeaths)) // deaths
+			write_short(0) // class?
+			write_short(get_member(iAttacker, m_iTeam)) // team
+			message_end()
+		}	
+	}
+	
+	if (is_user_connected(iVictim))
+	{
+		// Get number of deaths victim
+		new iSetDeaths = get_member(iVictim, m_iDeaths)
+
+		// Set victim deaths
+		set_member(iVictim, m_iDeaths, (iSetDeaths + iDeaths))
+
+		// Update scoreboard with attacker and victim info
+		if (iScoreboard)
+		{
+			message_begin(MSG_BROADCAST, msg_ScoreInfo)
+			write_byte(iVictim) // id
+			write_short(floatround(get_entvar(iVictim, var_frags))) // frags
+			write_short((iSetDeaths + iDeaths)) // deaths
+			write_short(0) // class?
+			write_short(get_member(iVictim, m_iTeam)) // team
+			message_end()
+		}
 	}
 }
 
-// Send Death Message
+/**
+ * Sent green skull in death message.
+ *
+ * @param iAttacker 	Attacker index.
+ * @param iVictim 		Victim index.
+ *
+ * @noreturn
+ *
+ */
 stock SendDeathMsg(iAttacker, iVictim)
 {
-	message_begin(MSG_ALL, get_user_msgid("DeathMsg"), {0, 0, 0}, 0)
+	message_begin(MSG_ALL, msg_DeathMsg)
 	write_byte(iAttacker) // killer
 	write_byte(iVictim) // victim
-	write_byte(1) // headshot flag
-	write_string("infection") // killer's weapon
+	write_byte(0) // headshot flag
+	write_string("teammate") // killer's weapon
 	message_end()
 }
 
-// Show infected icon
+/**
+ * Show infection icon for specific player.
+ * 
+ * @param id 	Client index.
+ *
+ * @noreturn
+ *
+ */
 stock InfectionIcon(id)
 {
-	message_begin(MSG_ONE_UNRELIABLE, get_user_msgid("Damage"), _, id)
+	message_begin(MSG_ONE_UNRELIABLE, msg_Damage, .player = id)
 	write_byte(0) // damage save
 	write_byte(0) // damage take
 	write_long(DMG_NERVEGAS) // damage type - DMG_RADIATION
@@ -285,16 +278,33 @@ stock InfectionIcon(id)
 	message_end()
 }
 
-// Fix Dead Attribute
-stock FixDeadAttrib(iIndex)
+/**
+ * Remove dead attrib in scoreboard for specific player.
+ *
+ * @param id 	Client index.
+ *
+ * @noreturn
+ *
+ */
+stock FixDeadAttrib(id)
 {
-	message_begin(MSG_ALL, get_user_msgid("ScoreAttrib"), {0, 0, 0}, 0)
-	write_byte(iIndex) // id
+	message_begin(MSG_ALL, msg_ScoreAttrib)
+	write_byte(id) // id
 	write_byte(0) // attrib (0 = Nothing || 1 = Dead)
 	message_end()
 }
 
-// Set an entity's key value
+/**
+ * Set entity new key value's.
+ *
+ * @param entity 	Entity index.
+ * @param key 		Key name.
+ * @param value 	Value to set.
+ * @param classname Classname of entity
+ *
+ * @noreturn
+ *
+ */
 stock Set_KeyValue(entity, const key[], const value[], const classname[])
 {
 	set_kvd(0, KV_ClassName, classname)
@@ -305,37 +315,42 @@ stock Set_KeyValue(entity, const key[], const value[], const classname[])
 	dllfunc(DLLFunc_KeyValue, entity, 0)
 }
 
-// Set Custom Sky
+/**
+ * Set custom sky for current map.
+ *
+ * @param szSkyName 	Sky name.
+ *
+ * @noreturn
+ *
+ */
 stock Precache_Sky(const szSkyName[])
 {
-	new bool:bFound
-	static szTgaFile[35]
-	static szSuffix[6][3] = {"up", "dn", "ft", "bk", "lf", "rt"}
+	new szTgaFile[35]
+	new const szSuffix[6][3] = {"up", "dn", "ft", "bk", "lf", "rt"}
 
-	for(new i = 0; i < 6; ++i)
+	for(new id = 0; id < 6; id++)
 	{
-		formatex(szTgaFile, 34, "gfx/env/%s%s.tga", szSkyName, szSuffix[i])
+		formatex(szTgaFile, 34, "gfx/env/%s%s.tga", szSkyName, szSuffix[id])
 		
 		if(file_exists(szTgaFile))
-		{
 			precache_generic(szTgaFile)
-			bFound = true
-		}
 		else
-		{
-			log_amx("Cannot locate file '%s'", szTgaFile)
-			bFound = false
-			break
-		}
+			server_print("[ZE] Cannot locate file '%s', Skipping...", szTgaFile)
 	}
 	
-	if(bFound == true)
-	{
-		set_cvar_string("sv_skyname", szSkyName)
-	}
+	set_cvar_string("sv_skyname", szSkyName)
 }
 
-// Add Commas
+/**
+ * Add commas in number and convert that to string. 
+ *
+ * @param iNum 		Number.
+ * @param szOutput 	The buffer to store string in.
+ * @param iLen 		Character size of the output buffer.
+ *
+ * @return 			Number of cells written. 
+ *
+ */
 stock AddCommas(iNum, szOutput[], iLen)  
 {  
     static szTmp[15], iOutputPos, iNumPos, iNumLen 
@@ -369,7 +384,15 @@ stock AddCommas(iNum, szOutput[], iLen)
     return iOutputPos
 }
 
-// Play Sound
+/**
+ * Play sound for specific player or everyone.
+ *
+ * @param id 		Client index.
+ * @param sound 	Sound to play (.mp3 or .wav).
+ *
+ * @noreturn
+ *
+ */
 stock PlaySound(id, const sound[])
 {
 	if (equal(sound[strlen(sound)-4], ".mp3"))
@@ -382,32 +405,45 @@ stock PlaySound(id, const sound[])
 	}
 }
 
-// Stop Sound
+/**
+ * Stop sound for all players.
+ */
 stock StopSound()
 {
-	for(new id = 1; id <= get_member_game(m_nMaxPlayers); id++)
-	{
-		client_cmd(id, "mp3 stop")
-		client_cmd(id, "spk stop")
-		client_cmd(id, "stopsound")
-	}
+	client_cmd(0, "mp3 stop")
+	client_cmd(0, "stopsound")
 }
 
-// Set Glow
-stock Set_Rendering(iEntity, fx = kRenderFxNone, r = 255, g = 255, b = 255, render = kRenderNormal, amount = 16)
+/**
+ * Set rendering of entity.
+ *
+ * @param ent 		Entity index.
+ * @param fx 		Render fx, check kRendeFx in amxconst.inc
+ * @param r 		Red color (0..255)
+ * @param g 		Green color (0..255)
+ * @param b 		Blue color (0..255)
+ * @param render 	Render mode, check kRender in amxconst.inc
+ * @param amout 	Render amout (0..255)
+ *
+ * @noreturn
+ *
+ */
+stock Set_Rendering(ent, fx = kRenderFxNone, r = 255, g = 255, b = 255, render = kRenderNormal, amount = 16)
 {
 	static Float:color[3]
 	color[0] = float(r)
 	color[1] = float(g)
 	color[2] = float(b)
 	
-	set_entvar(iEntity, var_renderfx, fx)
-	set_entvar(iEntity, var_rendercolor, color)
-	set_entvar(iEntity, var_rendermode, render)
-	set_entvar(iEntity, var_renderamt, float(amount))
+	set_entvar(ent, var_renderfx, fx)
+	set_entvar(ent, var_rendercolor, color)
+	set_entvar(ent, var_rendermode, render)
+	set_entvar(ent, var_renderamt, float(amount))
 }
 
-// Multiply Vector by Scalar
+/**
+ * Multiply Vector by Scalar
+ */
 stock VecMulScalar(const Float:vec[], Float:scalar, Float:out[])
 {
 	out[0] = vec[0] * scalar
@@ -415,19 +451,28 @@ stock VecMulScalar(const Float:vec[], Float:scalar, Float:out[])
 	out[2] = vec[2] * scalar
 }
 
-// Show Given BP Ammo
-stock Show_Given_BPAmmo(id, iAmmoType, iAmmount)
+/**
+ * Show given BP Ammo HUD for specific player.
+ *
+ * @param id 			Client inde.
+ * @param iAmmoType 	Ammo types
+ *
+ * @noreturn
+ */
+stock Show_Given_BPAmmo(id, iAmmoType, iAmount)
 {
-	if (iAmmount <= 0)
+	if (iAmount <= 0)
 		return
 	
-	message_begin(MSG_ONE, get_user_msgid("AmmoPickup"), {0,0,0}, id)
+	message_begin(MSG_ONE, msg_AmmoPickup, .player = id)
 	write_byte(iAmmoType)
-	write_byte(iAmmount)
+	write_byte(iAmount)
 	message_end()
 }
 
-// Log MySQL Errors
+/**
+ * Log MySQL Errors.
+ */
 stock SQL_IsFail(iFailState, iError, szError[], const szLogFile[])
 {
 	if (iFailState == TQUERY_CONNECT_FAILED)
