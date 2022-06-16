@@ -268,13 +268,19 @@ public Fw_PlayerKilled_Post(id)
 	}
 }
 
+// Hook called after reset max speed of the player.
 public Fw_RestMaxSpeed_Post(id)
 {
+	// Player is not Alive?
+	if (!is_user_alive(id))
+		return HC_CONTINUE // Prevent execute rest of codes.
+
+	// Get a current maxspeed of player.
 	static Float:flMaxSpeed
 	get_entvar(id, var_maxspeed, flMaxSpeed)
 
 	// Player is Alive and not Frozen?
-	if (is_user_alive(id) && flMaxSpeed != 1.0)
+	if (flMaxSpeed != 1.0)
 	{
 		// Player is Human?
 		if (!g_bIsZombie[id])
