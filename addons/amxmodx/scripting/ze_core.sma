@@ -53,6 +53,9 @@ new g_iAliveHumansNum,
 	bool:g_bDisconnectHumanWin,
 	bool:g_bRespawnAsZombie[33],
 	Float:g_flReferenceTime,
+	Float:g_flZombieSpeed,
+	Float:g_flHumanSpeedFactor,
+	Float:g_flZombieKnockback,
 	Float:g_flUserKnockback[33]
 
 // Cvars
@@ -163,6 +166,16 @@ public plugin_init()
 	g_pCvarColors[Blue] = register_cvar("ze_score_message_blue", "0")
 	g_pCvarRoundEndDelay = register_cvar("ze_round_end_delay", "5")
 	g_pCvarWinMessageType = register_cvar("ze_winmessage_type", "0")
+
+	// Bind CVars (Store the value in CVars in global variables.).
+	bind_pcvar_float(g_pCvarZombieSpeed, g_flZombieSpeed)
+	bind_pcvar_float(g_pCvarHumanSpeedFactor, g_flHumanSpeedFactor)
+	bind_pcvar_float(g_pCvarZombieKnockback, g_flZombieKnockback)
+
+	// Hook's CVars.
+	hook_cvar_change(g_pCvarZombieSpeed, "fw_Cvar_DirectSet_Post")
+	hook_cvar_change(g_pCvarHumanSpeedFactor, "fw_Cvar_DirectSet_Post")
+	hook_cvar_change(g_pCvarZombieKnockback, "fw_Cvar_DirectSet_Post")
 	
 	// Check Round Time to Terminate it
 	set_task(1.0, "Check_RoundTimeleft", ROUND_TIME_LEFT, _, _, "b")
@@ -210,6 +223,27 @@ public DelaySettings()
 	}
 }
 
+// Hook called when changing the value in "CVar's" of this plugin.
+public fw_Cvar_DirectSet_Post(pCvar_Handle, const szOld_Value[], const szNew_Value[])
+{
+	// Check CVar is "ze_zombie_knockback"?
+	if (pCvar_Handle == g_pCvarZombieKnockback)
+	{
+		// Store the new value in global variable.
+		g_flZombieKnockback = str_to_float(szNew_Value)
+	}
+	else if (pCvar_Handle == g_pCvarZombieSpeed) // Check CVar is "ze_zombie_speed"
+	{
+		// Store the new value in global variable.
+		g_flZombieSpeed = str_to_float(szNew_Value)
+	}
+	else if (pCvar_Handle == g_pCvarHumanSpeedFactor) // Check CVar is "ze_human_speed_factor"
+	{
+		// Store the new value in global variable.
+		g_flHumanSpeedFactor = str_to_float(szNew_Value) 
+	}
+}
+
 public Fw_CheckMapConditions_Post()
 {
 	// Block Game Commencing
@@ -245,30 +279,31 @@ public Fw_RestMaxSpeed_Post(id)
 		// Player is Human?
 		if (!g_bIsZombie[id])
 		{		
+			// Check Human has custom speed factor?
 			if (g_bHSpeedUsed[id])
 			{
 				// Set New Human Speed Factor
 				set_entvar(id, var_maxspeed, flMaxSpeed + float(g_iHSpeedFactor[id]))
-				return HC_CONTINUE
+				return HC_CONTINUE // Prevent execute rest of codes.
 			}
 				
 			// Set Human Speed Factor, native not used
-			set_entvar(id, var_maxspeed, flMaxSpeed + get_pcvar_float(g_pCvarHumanSpeedFactor))
-			return HC_CONTINUE
+			set_entvar(id, var_maxspeed, (flMaxSpeed + g_flHumanSpeedFactor))
+			return HC_CONTINUE // Prevent execute rest of codes.
 		}
 		else // Zombie.
 		{
-			// Zombie have custom maxspeed?
+			// Check Zombie has custom Speed?
 			if (g_bZSpeedUsed[id])
 			{
-				// Set zombie maxspeed from native.
+				// Set Zombie speed from native.
 				set_entvar(id, var_maxspeed, float(g_iZSpeedSet[id]))
-				return HC_CONTINUE
+				return HC_CONTINUE // Prevent execute rest of codes.
 			}
 
-			// Set Zombie maxspeed from cvar.
-			set_entvar(id, var_maxspeed, get_pcvar_float(g_pCvarZombieSpeed))
-			return HC_CONTINUE
+			// Set Zombie maxspeed from CVar.
+			set_entvar(id, var_maxspeed, g_flZombieSpeed)
+			return HC_CONTINUE // Prevent execute rest of codes.
 		}		
 	}
 	
@@ -398,25 +433,21 @@ public Fw_TakeDamage_Post(iVictim, iInflictor, iAttacker, Float:flDamage, bitsDa
 	// Set Knockback here, So if we blocked damage in TraceAttack event player won't get knockback (Fix For Madness)
 	if (g_bIsZombie[iVictim] && !g_bIsZombie[iAttacker])
 	{
-		// Remove Shock Pain
+		// Pain Shock Free!
 		set_member(iVictim, m_flVelocityModifier, 1.0)
 		
 		// Knockback is disabled from native.
 		if (g_bIsKnockBackUsed[iVictim] && g_flUserKnockback[iVictim] <= 0.0)
-			return HC_CONTINUE
+			return HC_CONTINUE // Prevent execute rest of codes.
 
-		// Get knockback of Zombie.
-		static Float:flKnockback
-		flKnockback = get_pcvar_float(g_pCvarZombieKnockback)
-
-		// Knockback is disabled from Cvar.
-		if (flKnockback <= 0.0)
-			return HC_CONTINUE
+		// Knockback has disabled from CVar?
+		if (g_flZombieKnockback <= 0.0)
+			return HC_CONTINUE // Prevent execute rest of codes.
 
 		// Set Knockback
 		static Float:flOrigin[3]
 		get_entvar(iAttacker, var_origin, flOrigin)
-		Set_Knockback(iVictim, flOrigin, g_bIsKnockBackUsed[iVictim] ? g_flUserKnockback[iVictim] : flKnockback, 2)
+		Set_Knockback(iVictim, flOrigin, g_bIsKnockBackUsed[iVictim] ? g_flUserKnockback[iVictim] : g_flZombieKnockback, 2)
 	}
 	
 	return HC_CONTINUE
@@ -904,7 +935,7 @@ public native_ze_get_user_knockback(id)
 		return -1
 	}
 
-	return floatround(g_bIsKnockBackUsed[id] ? g_flUserKnockback[id]:get_pcvar_float(g_pCvarZombieKnockback))
+	return floatround(g_bIsKnockBackUsed[id] ? g_flUserKnockback[id] : g_flZombieKnockback)
 }
 
 public native_ze_set_user_knockback(id, Float:flKnockback)
