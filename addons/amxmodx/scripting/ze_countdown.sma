@@ -1,8 +1,5 @@
 #include <zombie_escape>
 
-// Setting File
-new const ZE_SETTING_RESOURCES[] = "zombie_escape.ini"
-
 // Defines
 #define SOUND_MAX_LENGTH 64
 #define TASK_COUNTDOWN 2010
@@ -77,7 +74,7 @@ public ze_game_started()
 public Countdown_Start()
 {
 	// Check game mode has started or not yet?
-	if ((g_iCountDown - 1 < 0) || !ze_is_game_started() || ze_is_gamemode_started())
+	if ((g_iCountDown - 1 < 0) || !ze_is_game_started() || ze_pGameMode)
 	{
 		remove_task(TASK_COUNTDOWN) // Remove the task
 		return // Block the execution of the blew code
