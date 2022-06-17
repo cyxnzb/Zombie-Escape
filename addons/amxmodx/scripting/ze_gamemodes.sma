@@ -38,7 +38,6 @@ new g_iDefaultGame
 new g_iFwResult
 new g_iGameCurrent
 new g_iForwards[FORWARDS]
-new bool:g_bIsGameStarted
 
 // Dynamic Arrays.
 new Array:g_aGameName
@@ -54,7 +53,6 @@ public plugin_natives()
 	register_native("ze_gamemode_get_id", "native_gamemode_get_id", 0)
 	register_native("ze_gamemode_get_count", "native_gamemode_get_count", 0)
 	register_native("ze_gamemode_start", "native_gamemode_start", 0)
-	register_native("ze_is_gamemode_started", "native_is_gamemode_started", 0)
 }
 
 // Forward called after server activation.
@@ -199,7 +197,7 @@ public chooseGame()
 				
 				// Execute forward ze_gamemode_chosen(game_id).
 				g_iGameCurrent = iGame
-				g_bIsGameStarted = true // Has game started.
+				ze_pGameMode = true // Has game started.
 				ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* No return value */, iGame)
 				return // Gamemode has started.
 			}
@@ -247,7 +245,7 @@ public chooseDefault()
 		ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* Ignore return value */, g_iDefaultGame)
 	
 		// Gamemode has started.
-		g_bIsGameStarted = true
+		ze_pGameMode = true
 		g_iGameCurrent = g_iDefaultGame
 	}
 }
@@ -270,7 +268,7 @@ public pausePlugins()
 public ze_roundend(iWinTeam)
 {
 	// Round over.
-	g_bIsGameStarted = false
+	ze_pGameMode = false
 	g_iGameCurrent = ZE_WRONG_GAME
 
 	// Remove task.
@@ -445,13 +443,7 @@ public native_gamemode_start(plugin_id, paras_num)
 	ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* Ignore return value */, iGame)
 
 	// Gamemode has started.
-	g_bIsGameStarted = true
+	ze_pGameMode = true
 	g_iGameCurrent = iGame
 	return true
-}
-
-public native_is_gamemode_started()
-{
-	// Return 1 or 0
-	return g_bIsGameStarted
 }
