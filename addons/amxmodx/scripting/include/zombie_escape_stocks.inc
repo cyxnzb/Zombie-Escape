@@ -1,4 +1,5 @@
 #include <amxmodx>
+#include <amxmisc>
 #include <reapi>
 
 // Constants.
@@ -60,28 +61,17 @@ stock ze_colored_print(const id, const message[], any:...)
  */
 stock GetAlivePlayersNum(CsTeams:iTeam)
 {
-	new iTAliveNum
+	static iTAliveNum
 
 	// Get the number of all alive players in specific team.
 	switch (iTeam)
 	{
 		case CS_TEAM_T:
-			get_players("", iTAliveNum, "ae", "T")
+			iTAliveNum = get_playersnum_ex((GetPlayers_ExcludeDead|GetPlayers_MatchTeam), "TERRORIST")
 		case CS_TEAM_CT:
-			get_players("", iTAliveNum, "ae", "CT")
+			iTAliveNum = get_playersnum_ex((GetPlayers_ExcludeDead|GetPlayers_MatchTeam), "CT")
 	}
 	return iTAliveNum
-}
-
-/**
- * Returns the number of all alive players.
- */
-stock GetAllAlivePlayersNum()
-{
-	// Get number of all alive players.
-	new iAliveAll
-	get_players("", iAliveAll, "a")
-	return iAliveAll
 }
 
 /**
@@ -248,13 +238,13 @@ stock UpdateFrags(iAttacker, iVictim, iFrags, iDeaths, iScoreboard)
  * @noreturn
  *
  */
-stock SendDeathMsg(iAttacker, iVictim)
+stock SendDeathMsg(iAttacker, iVictim, bool:bGreen = false)
 {
 	message_begin(MSG_ALL, msg_DeathMsg)
 	write_byte(iAttacker) // killer
 	write_byte(iVictim) // victim
 	write_byte(0) // headshot flag
-	write_string("teammate") // killer's weapon
+	write_string(bGreen ? "teammate" : "infection") // killer's weapon
 	message_end()
 }
 
