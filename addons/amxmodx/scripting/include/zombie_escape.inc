@@ -43,6 +43,9 @@ enum
 // Game mode return value.
 #define ZE_WRONG_GAME -1
 
+// Public Variables.
+public ze_pGameMode = 0
+
 // Forwards
 
 /*
@@ -1062,13 +1065,3 @@ native ze_gamemode_get_count();
  *
  */
 native ze_gamemode_start(const game_id);
-
-/**
- * Description: 	Check game mode has started or not yet.
- *
- * @noparam
- *
- * @return 			true  | If game mode starts.
- *					false | If no game mode starts.
- */
-native ze_is_gamemode_started();
