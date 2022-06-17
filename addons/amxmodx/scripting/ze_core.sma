@@ -46,11 +46,9 @@ new g_iAliveHumansNum,
 	bool:g_bIsRoundEnding,
 	bool:g_bHSpeedUsed[33], 
 	bool:g_bZSpeedUsed[33],
-	bool:g_bEndCalled,
 	bool:g_bIsKnockBackUsed[33],
 	bool:g_bIsGravityUsed[33],
 	bool:g_bEnteredNotChoosed[33],
-	bool:g_bDisconnectHumanWin,
 	bool:g_bRespawnAsZombie[33],
 	Float:g_flReferenceTime,
 	Float:g_flZombieSpeed,
@@ -376,7 +374,6 @@ public New_Round()
 	
 	// Round Starting
 	g_bIsRoundEnding = false
-	g_bEndCalled = false
 }
 
 // Score Message Task
@@ -401,33 +398,28 @@ public Score_Message(TaskID)
 public Fw_TraceAttack_Pre(iVictim, iAttacker, Float:flDamage, Float:flDirection[3], iTracehandle, bitsDamageType)
 {
 	if (iVictim == iAttacker || !is_user_connected(iVictim) || !is_user_connected(iAttacker))
-		return HC_CONTINUE
+		return HC_CONTINUE // Prevent execute rest of codes and continue Trace attack.
 	
 	// Attacker and Victim is in same teams? Skip code blew
 	if (get_member(iAttacker, m_iTeam) == get_member(iVictim, m_iTeam))
-		return HC_CONTINUE
+		return HC_CONTINUE // Prevent execute rest of codes and continue Trace attack.
 	
+	// Check attacker is Zombie?
 	if (g_bIsZombie[iAttacker])
-	{
-		g_iAliveHumansNum = GetAlivePlayersNum(CsTeams:TEAM_CT)
-		
+	{		
+		// If return FALSE in this function, Prevent Trace attack. 
 		if (!Set_User_Zombie(iVictim, iAttacker, flDamage))
-			return HC_SUPERCEDE
+			return HC_SUPERCEDE // Prevent Trace attack.
 		
-		if (g_iAliveHumansNum == 1) // Check if this is Last Human, Because of Delay i can't check if it's 0 instead of 1
-		{
-			// End round event called one time
-			g_bEndCalled = true
-			
-			// Round is Ending
-			g_bIsRoundEnding = true
-			
-			// Zombie Win, Show message win and finish the round.
-			Finish_Round(ZE_TEAM_ZOMBIE)
+		// Check if this is Last Human
+		if (!GetAlivePlayersNum(CS_TEAM_CT))
+		{						
+			// Finish the round and make Zombies are winners and update Zombies score and show message Win.
+			finish_Round(ZE_TEAM_ZOMBIE)
 		}
 	}
-	
-	return HC_CONTINUE
+
+	return HC_CONTINUE // Continue Trace attack.
 }
 
 public Fw_TakeDamage_Post(iVictim, iInflictor, iAttacker, Float:flDamage, bitsDamageType)
@@ -459,34 +451,27 @@ public Fw_TakeDamage_Post(iVictim, iInflictor, iAttacker, Float:flDamage, bitsDa
 	return HC_CONTINUE
 }
 
+// Hook called after round over.
 public Round_End()
 {
-	g_iAliveZombiesNum = GetAlivePlayersNum(CsTeams:TEAM_TERRORIST)
-	g_iAliveHumansNum = GetAlivePlayersNum(CsTeams:TEAM_CT)
-	
-	if ((g_iAliveZombiesNum == 0 && g_bGameStarted) || (g_bDisconnectHumanWin))
+	// Check round is already ended?
+	if (g_bIsRoundEnding)
+		return // Prevent execute rest of codes.
+
+	// Get the number of alive players (Humans and Zombies)
+	new iAliveZombiesNum = GetAlivePlayersNum(CS_TEAM_T)
+	new iAliveHumansNum  = GetAlivePlayersNum(CS_TEAM_CT)
+
+	// Check all Zombies are died?
+	if (iAliveHumansNum && !iAliveZombiesNum)
 	{
-		// Show message win and call forward ze_roundend(iWinTeam).
-		Finish_Round(ZE_TEAM_HUMAN, true, false)
-		g_iHumansScore++
-		g_bIsRoundEnding = true
-		g_bDisconnectHumanWin = false
-		return // To block Execute the code blew
+		// Finish round and make Humans are winners.
+		finish_Round(ZE_TEAM_HUMAN)
 	}
-	
-	g_iZombiesScore++
-	g_bIsRoundEnding = true
-	
-	// If it's already called one time, don't call it again
-	if (!g_bEndCalled)
+	else if (!iAliveHumansNum && iAliveZombiesNum)
 	{
-		// Show message win and call forward ze_roundend(iWinTeam)
-		Finish_Round(ZE_TEAM_ZOMBIE, true, false)
-	}
-	else 
-	{
-		// Show only message win.
-		Finish_Round(ZE_TEAM_ZOMBIE, false, false)	
+		// Finish round and make Zombies are winners.
+		finish_Round(ZE_TEAM_ZOMBIE)		
 	}
 }
 
@@ -510,15 +495,13 @@ public Check_RoundTimeleft()
 	new Float:flRoundTimeLeft = (g_flReferenceTime + float(g_iRoundTime)) - get_gametime()
 	
 	if (floatround(flRoundTimeLeft) == 0 && !g_bIsRoundEnding)
-	{
-		// Round is Ending
-		g_bIsRoundEnding = true
-		
-		// Show message win and finish round.
-		Finish_Round(ZE_TEAM_ZOMBIE, false, true)
+	{		
+		// Finish round and make Zombies are winners and update Zombies score.
+		finish_Round(ZE_TEAM_ZOMBIE)
 	}
 }
 
+// Forward called when player disconnected from server.
 public client_disconnected(id)
 {
 	// Reset speed for this dropped id
@@ -543,10 +526,7 @@ public client_disconnected(id)
 
 // This check done when player disconnect
 public Check_AlivePlayers()
-{
-	g_iAliveZombiesNum = GetAlivePlayersNum(CsTeams:TEAM_TERRORIST)
-	g_iAliveHumansNum = GetAlivePlayersNum(CsTeams:TEAM_CT)
-	
+{	
 	// Game Started? (There is at least 2 players Alive?)
 	if (g_bGameStarted)
 	{
@@ -554,45 +534,46 @@ public Check_AlivePlayers()
 		new iHumansNum 	= get_member_game(m_iNumCT)
 		new iZombiesNum = get_member_game(m_iNumTerrorist)
 
-		// Get number of alive Humans and Zombies.
-		new iAliveZombiesNum = GetAlivePlayersNum(CS_TEAM_T)
-		new iAliveHumansNum  = GetAlivePlayersNum(CS_TEAM_CT)
-
-		// Get the required number of players.
-		new iReqPlayers = get_pcvar_num(g_pCvarReqPlayers)
-
 		// Required players not found?
-		if ((iHumansNum + iZombiesNum) < iReqPlayers)
+		if ((iHumansNum + iZombiesNum) < get_pcvar_num(g_pCvarReqPlayers))
 		{
 			// Stop game.
 			g_bGameStarted = false
 		}
 		else
 		{
-			// All Zombies disconnected from the server?
-			if (iHumansNum && !iZombiesNum)
+			// Check game mode is started or not yet?
+			if (ze_pGameMode)
 			{
-				// Finish round and make Humans winners.
-				Finish_Round(ZE_TEAM_HUMAN)
-				return // Block execute rest of codes.
-			}
-			else if (!iHumansNum && iZombiesNum) // All Humans disconnected from the server?
-			{
-				// Finish round and make Zombie winners.
-				Finish_Round(ZE_TEAM_ZOMBIE)	
-				return // Block execute rest of codes.			
-			}
-			
-			// There no alive Humans?
-			if (iAliveHumansNum && !iAliveZombiesNum)
-			{
-				// Finish round and make Humans winners.
-				Finish_Round(ZE_TEAM_HUMAN)			
-			}
-			else if (!iAliveHumansNum && iAliveZombiesNum) // There no alive Zombies?
-			{
-				// Finish round and make Zombie winners.
-				Finish_Round(ZE_TEAM_ZOMBIE)	
+				// All Zombies disconnected from the server?
+				if (iHumansNum && !iZombiesNum)
+				{
+					// Finish round and make Humans winners.
+					finish_Round(ZE_TEAM_HUMAN)
+					return // Block execute rest of codes.
+				}
+				else if (!iHumansNum && iZombiesNum) // All Humans disconnected from the server?
+				{
+					// Finish round and make Zombie winners.
+					finish_Round(ZE_TEAM_ZOMBIE)	
+					return // Block execute rest of codes.			
+				}
+
+				// Get number of alive Humans and Zombies.
+				new iAliveZombiesNum = GetAlivePlayersNum(CS_TEAM_T)
+				new iAliveHumansNum  = GetAlivePlayersNum(CS_TEAM_CT)
+
+				// There no alive Humans?
+				if (iAliveHumansNum && !iAliveZombiesNum)
+				{
+					// Finish round and make Humans winners.
+					finish_Round(ZE_TEAM_HUMAN)			
+				}
+				else if (!iAliveHumansNum && iAliveZombiesNum) // There no alive Zombies?
+				{
+					// Finish round and make Zombie winners.
+					finish_Round(ZE_TEAM_ZOMBIE)	
+				}				
 			}
 		}
 	}
@@ -715,32 +696,35 @@ Set_User_Zombie(id, iAttacker = 0, Float:flDamage = 0.0)
 	return true
 }
 
-Finish_Round(iTeam, bool:bCallForward = true, bool:bForceEnd = true)
+finish_Round(iTeam)
 {
+	// Round over.
+	g_bIsRoundEnding = true
+
 	// Get round end delay
 	new Float:flRoundEndDelay = get_pcvar_float(g_pCvarRoundEndDelay)
 
+	// Choose team:
 	switch (iTeam)
 	{
-		case ZE_TEAM_HUMAN:
+		case ZE_TEAM_HUMAN: // Humans team.
 		{
-			if (bCallForward)
-			{
-				// Execute forward ze_roundend(iWinTeam).
-				ExecuteForward(g_iForwards[FORWARD_ROUNDEND], _/* No return value */, ZE_TEAM_HUMAN)
-			}
+			// Execute forward ze_roundend(iWinTeam).
+			ExecuteForward(g_iForwards[FORWARD_ROUNDEND], _/* No return value */, ZE_TEAM_HUMAN)
 
-			if (bForceEnd)
-			{
-				// Finish the round, and make Humans are winners.
-				rg_round_end(flRoundEndDelay, WINSTATUS_CTS, ROUND_CTS_WIN, "", "")
-			}
+			// Finish the round, and make Humans are winners.
+			rg_round_end(flRoundEndDelay, WINSTATUS_CTS, ROUND_CTS_WIN, "", "")
+
+			// +1 in Humans score.
+			g_iHumansScore++
 
 			// Get HUD type of win message.
 			switch (get_pcvar_num(g_pCvarWinMessageType))
 			{
 				case 0: // Normal Text print_center.
+				{
 					client_print(0, print_center, "%L", LANG_PLAYER, "ESCAPE_SUCCESS")
+				}
 				case 1: // HUD
 				{
 					set_hudmessage(0, 100, 200, -1.0, 0.4, 1, flRoundEndDelay, flRoundEndDelay, 0.0, 0.0)
@@ -753,25 +737,24 @@ Finish_Round(iTeam, bool:bCallForward = true, bool:bForceEnd = true)
 				}
 			}
 		}
-		case ZE_TEAM_ZOMBIE:
+		case ZE_TEAM_ZOMBIE: // Zombies team.
 		{
-			if (bCallForward)
-			{
-				// Execute forward ze_roundend(iWinTeam).
-				ExecuteForward(g_iForwards[FORWARD_ROUNDEND], _/* No return value */, ZE_TEAM_ZOMBIE)
-			}
+			// Execute forward ze_roundend(iWinTeam).
+			ExecuteForward(g_iForwards[FORWARD_ROUNDEND], _/* No return value */, ZE_TEAM_ZOMBIE)
 
-			if (bForceEnd)
-			{
-				// Finish the round, and make Zombies are winners.
-				rg_round_end(flRoundEndDelay, WINSTATUS_TERRORISTS, ROUND_TERRORISTS_WIN, "", "")
-			}
+			// Finish the round, and make Humans are winners.
+			rg_round_end(flRoundEndDelay, WINSTATUS_TERRORISTS, ROUND_TERRORISTS_WIN, "", "")
+
+			// +1 in Humans score.
+			g_iZombiesScore++
 
 			// Get HUD type of win message.
 			switch (get_pcvar_num(g_pCvarWinMessageType))
 			{
 				case 0: // Normal Text print_center.
+				{
 					client_print(0, print_center, "%L", LANG_PLAYER, "ESCAPE_FAIL")
+				}
 				case 1: // HUD
 				{
 					set_hudmessage(200, 0, 0, -1.0, 0.4, 1, flRoundEndDelay, flRoundEndDelay, 0.0, 0.0)
