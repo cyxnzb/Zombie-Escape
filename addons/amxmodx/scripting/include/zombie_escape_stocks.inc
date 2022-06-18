@@ -79,7 +79,7 @@ stock GetAlivePlayersNum(CsTeams:iTeam)
  */
 stock RequiredZombies()
 {
-	switch(GetAllAlivePlayersNum())
+	switch(get_playersnum_ex(GetPlayers_ExcludeDead))
 	{
 		case 2..5: return 1
 		case 6..15: return 2
