@@ -3,7 +3,7 @@
 // Fowards
 enum _:TOTAL_FORWARDS
 {
-	FORWARD_NONE = 0,
+	FORWARD_RESULT = 0,
 	FORWARD_ROUNDEND,
 	FORWARD_HUMANIZED_PRE,
 	FORWARD_HUMANIZED,
@@ -15,7 +15,7 @@ enum _:TOTAL_FORWARDS
 	FORWARD_DISCONNECT
 }
 
-new g_iForwards[TOTAL_FORWARDS], g_iFwReturn
+new g_iForwards[TOTAL_FORWARDS]
 
 // Tasks IDs
 enum
@@ -368,13 +368,15 @@ public New_Round()
 		g_iRoundNum++
 	}
 	
-	ExecuteForward(g_iForwards[FORWARD_GAME_STARTED_PRE], g_iFwReturn)
+	// Execute forward ze_game_started_pre() and get return value.
+	ExecuteForward(g_iForwards[FORWARD_GAME_STARTED_PRE], g_iForwards[FORWARD_RESULT])
 	
-	if (g_iFwReturn >= ZE_STOP)
+	// Forward has return value 1 or above?
+	if (g_iForwards[FORWARD_RESULT] >= ZE_STOP)
 		return
 	
-	// Score Message Task
-	set_task(10.0, "Score_Message", TASK_SCORE_MESSAGE, _, _, "b")
+	// New task for Score Message.
+	set_task(10.0, "Score_Message", TASK_SCORE_MESSAGE, "", 0, "b")
 	
 	if (!g_bGameStarted)
 	{
@@ -383,9 +385,11 @@ public New_Round()
 		return // Block the execution of the blew code 
 	}
 	
-	// Game Already started
+	// Print colored message on chat for all players.
 	ze_colored_print(0, "%L", LANG_PLAYER, "READY_TO_RUN")
-	ExecuteForward(g_iForwards[FORWARD_GAME_STARTED], g_iFwReturn)
+
+	// Execute forward ze_game_started()
+	ExecuteForward(g_iForwards[FORWARD_GAME_STARTED])
 	
 	// Round Starting
 	g_bIsRoundEnding = false
@@ -538,9 +542,9 @@ public client_disconnected(id)
 	g_iUserGravity[id] = 0
 	
 	// Execute our disconnected forward
-	ExecuteForward(g_iForwards[FORWARD_DISCONNECT], g_iFwReturn, id)
+	ExecuteForward(g_iForwards[FORWARD_DISCONNECT], g_iForwards[FORWARD_RESULT], id)
 	
-	if (g_iFwReturn >= ZE_STOP)
+	if (g_iForwards[FORWARD_RESULT] >= ZE_STOP)
 		return
 	
 	// Delay Then Check Players to Terminate The round (Delay needed)
@@ -672,10 +676,10 @@ Set_User_Human(id)
 		return false
 	
 	// Execute forward ze_user_humanized_pre(id) and get return value.
-	ExecuteForward(g_iForwards[FORWARD_HUMANIZED_PRE], g_iFwReturn, id)
+	ExecuteForward(g_iForwards[FORWARD_HUMANIZED_PRE], g_iForwards[FORWARD_RESULT], id)
 
 	// Forward has return value 1 or above?
-	if (g_iFwReturn >= ZE_STOP)
+	if (g_iForwards[FORWARD_RESULT] >= ZE_STOP)
 		return false
 
 	// Unset player Zombie flag.
@@ -705,10 +709,10 @@ Set_User_Zombie(id, iAttacker = 0, Float:flDamage = 0.0)
 		return false
 		
 	// Execute pre-infection forward
-	ExecuteForward(g_iForwards[FORWARD_PRE_INFECTED], g_iFwReturn, id, iAttacker, floatround(flDamage))
+	ExecuteForward(g_iForwards[FORWARD_PRE_INFECTED], g_iForwards[FORWARD_RESULT], id, iAttacker, floatround(flDamage))
 	
 	// Forward has return value 1 or above?
-	if (g_iFwReturn >= ZE_STOP)
+	if (g_iForwards[FORWARD_RESULT] >= ZE_STOP)
 	{
 		return false // Prevent execute rest of codes.
 	}
