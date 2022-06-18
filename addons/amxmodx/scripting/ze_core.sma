@@ -40,6 +40,7 @@ new g_iRoundTime,
 	g_iZSpeedSet[33],
 	g_iUserGravity[33],
 	bool:g_bGameStarted, 
+	bool:g_bSkullGreenColor,
 	bool:g_bIsZombie[33],  
 	bool:g_bIsRoundEnding,
 	bool:g_bHSpeedUsed[33], 
@@ -68,7 +69,8 @@ new	g_pCvarHumanSpeedFactor,
 	g_pCvarScoreMessageType, 
 	g_pCvarColors[3],
 	g_pCvarRoundEndDelay,
-	g_pCvarWinMessageType
+	g_pCvarWinMessageType,
+	g_pCvarDeathMsgColor
 	
 // Trie's.
 new Trie:g_tChosenPlayers
@@ -142,26 +144,27 @@ public plugin_init()
 	register_dictionary("zombie_escape.txt")
 	
 	// Humans Cvars
-	g_pCvarHumanSpeedFactor = register_cvar("ze_human_speed_factor", "20.0")
-	g_pCvarHumanGravity = register_cvar("ze_human_gravity", "800")
-	g_pCvarHumanHealth = register_cvar("ze_human_health", "1000")
+	g_pCvarHumanSpeedFactor 	= register_cvar("ze_human_speed_factor", "20.0")
+	g_pCvarHumanGravity 		= register_cvar("ze_human_gravity", "800")
+	g_pCvarHumanHealth 			= register_cvar("ze_human_health", "1000")
 	
 	// Zombie Cvars
-	g_pCvarZombieSpeed = register_cvar("ze_zombie_speed", "350.0")
-	g_pCvarZombieGravity = register_cvar("ze_zombie_gravity", "640")
-	g_pCvarZombieHealth = register_cvar("ze_zombie_health", "10000")
-	g_pCvarZombieKnockback = register_cvar("ze_zombie_knockback", "300.0")
+	g_pCvarZombieSpeed 			= register_cvar("ze_zombie_speed", "350.0")
+	g_pCvarZombieGravity 		= register_cvar("ze_zombie_gravity", "640")
+	g_pCvarZombieHealth 		= register_cvar("ze_zombie_health", "10000")
+	g_pCvarZombieKnockback 		= register_cvar("ze_zombie_knockback", "300.0")
 	
 	// General Cvars
-	g_pCvarFreezeTime = register_cvar("ze_freeze_time", "20")
-	g_pCvarRoundTime = register_cvar("ze_round_time", "9.0")
-	g_pCvarReqPlayers = register_cvar("ze_required_players", "2")
-	g_pCvarScoreMessageType = register_cvar("ze_score_message_type", "1")
-	g_pCvarColors[Red] = register_cvar("ze_score_message_red", "200")
-	g_pCvarColors[Green] = register_cvar("ze_score_message_green", "100")
-	g_pCvarColors[Blue] = register_cvar("ze_score_message_blue", "0")
-	g_pCvarRoundEndDelay = register_cvar("ze_round_end_delay", "5")
-	g_pCvarWinMessageType = register_cvar("ze_winmessage_type", "0")
+	g_pCvarFreezeTime 			= register_cvar("ze_freeze_time", "20")
+	g_pCvarRoundTime 			= register_cvar("ze_round_time", "9.0")
+	g_pCvarReqPlayers 			= register_cvar("ze_required_players", "2")
+	g_pCvarScoreMessageType 	= register_cvar("ze_score_message_type", "1")
+	g_pCvarColors[Red] 			= register_cvar("ze_score_message_red", "200")
+	g_pCvarColors[Green] 		= register_cvar("ze_score_message_green", "100")
+	g_pCvarColors[Blue] 		= register_cvar("ze_score_message_blue", "0")
+	g_pCvarRoundEndDelay 		= register_cvar("ze_round_end_delay", "5")
+	g_pCvarWinMessageType 		= register_cvar("ze_winmessage_type", "0")
+	g_pCvarDeathMsgColor 		= register_cvar("ze_deathmsg_skull", "0")
 
 	// Bind CVars (Store the value in CVars in global variables.).
 	bind_pcvar_float(g_pCvarZombieSpeed, g_flZombieSpeed)
@@ -174,6 +177,7 @@ public plugin_init()
 	hook_cvar_change(g_pCvarZombieKnockback, "fw_Cvar_DirectSet_Post")
 	hook_cvar_change(g_pCvarRoundTime, "fw_Cvar_DirectSet_Post")
 	hook_cvar_change(g_pCvarFreezeTime, "fw_Cvar_DirectSet_Post")
+	hook_cvar_change(g_pCvarDeathMsgColor, "fw_Cvar_DirectSet_Post")
 
 	// Check Round Time to Terminate it
 	set_task(1.0, "Check_RoundTimeleft", ROUND_TIME_LEFT, _, _, "b")
@@ -245,6 +249,11 @@ public fw_Cvar_DirectSet_Post(pCvar_Handle, const szOld_Value[], const szNew_Val
 	{
 		// Replace value in CVar freezetime
 		set_cvar_string("mp_freezetime", szNew_Value)
+	}
+	else if (pCvar_Handle == g_pCvarDeathMsgColor)
+	{
+		// Check death message green color is Enabled?
+		g_bSkullGreenColor = (str_to_num(szNew_Value) != 0) ? true : false
 	}
 }
 
@@ -674,32 +683,46 @@ Set_User_Human(id)
 
 Set_User_Zombie(id, iAttacker = 0, Float:flDamage = 0.0)
 {
+	// Player not alive?
 	if (!is_user_alive(id))
 		return false
 		
 	// Execute pre-infection forward
 	ExecuteForward(g_iForwards[FORWARD_PRE_INFECTED], g_iFwReturn, id, iAttacker, floatround(flDamage))
 	
+	// Forward has return value 1 or above?
 	if (g_iFwReturn >= ZE_STOP)
 	{
-		return false
+		return false // Prevent execute rest of codes.
 	}
 	
+	// Attacker is not server?
 	if (iAttacker > 0)
 	{
 		// Death Message with Infection style, only if infection caused by player not server
-		SendDeathMsg(iAttacker, id)
+		SendDeathMsg(iAttacker, id, g_bSkullGreenColor)
 	}
 	
+	// Set player Zombie flag.
 	g_bIsZombie[id] = true
+
+	// Set player custom health and gravity
 	set_entvar(id, var_health, get_pcvar_float(g_pCvarZombieHealth))
 	set_entvar(id, var_gravity, float(g_bIsGravityUsed[id] ? g_iUserGravity[id] : get_pcvar_num(g_pCvarZombieGravity))/800.0)
+
+	// Remove player all weapons and items and him knife only.
 	rg_remove_all_items(id)
 	rg_give_item(id, "weapon_knife", GT_APPEND)
+
+	// Execute forward ze_user_infected(iVictim, iInfector)
 	ExecuteForward(g_iForwards[FORWARD_INFECTED], g_iFwReturn, id, iAttacker)
 	
-	if (get_member(id, m_iTeam) != TEAM_TERRORIST)
+	// Player not from Terrorists team?
+	if (TeamName:get_user_team(id) != TEAM_TERRORIST)
+	{
+		// Switch player to Terrorists team.
 		rg_set_user_team(id, TEAM_TERRORIST, MODEL_UNASSIGNED)
+	}
 	
 	return true
 }
