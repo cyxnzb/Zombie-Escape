@@ -58,16 +58,32 @@ public ze_pGameMode = 0
 */
 forward ze_roundend(WinTeam);
 
-/*
-* Description:	Called when user humanized, it called whenever 
-*				ze_set_user_human(id) native used.
-*				It's called also at every new round when all players humanized.
-*
-* @param id		Client index.
-*
-* @return		Returns here useless, it will not affect the real humanization event.
-*
-*/
+/**
+ * Description:	Called when user humanized, it called whenever 
+ *				ze_set_user_human(id) native used.
+ *				It's called also at every new round when all players humanized.
+ *
+ * @param id	Client index.
+ *
+ * @return		ZE_STOP 	| Prevent humanization event.
+ *				ZE_CONTINUE	| Continue humanization event.
+ *
+ * @note 		ze_user_humanized never called,
+ *				When this forward return value 1 or above.
+ *
+ */
+forward ze_user_humanized_pre(id);
+
+/** */
+ * Description:	Called after user humanized, it called whenever 
+ *				ze_set_user_human(id) native used.
+ *				It's called also at every new round when all players humanized.
+ *
+ * @param id	Client index.
+ *
+ * @return		Returns here useless.
+ *
+ */
 forward ze_user_humanized(id);
 
 /*
