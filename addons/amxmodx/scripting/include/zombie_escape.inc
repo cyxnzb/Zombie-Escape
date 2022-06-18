@@ -74,7 +74,7 @@ forward ze_roundend(WinTeam);
  */
 forward ze_user_humanized_pre(id);
 
-/** */
+/**
  * Description:	Called after user humanized, it called whenever 
  *				ze_set_user_human(id) native used.
  *				It's called also at every new round when all players humanized.
@@ -293,6 +293,18 @@ forward ze_gamemode_chosen(game_id);
 *
 */
 native ze_is_user_zombie(id);
+
+/**
+ * Description: Check if user zombie or not
+ *				If player not found is will return  false not -1.
+ *
+ * @param id 	Client index.
+ *
+ * @return		true  | If user Zombie.
+ *				false | If user Human.
+ *
+ */
+native bool:ze_is_user_zombie_ex(id);
 
 /*
 * Description:	Check if game started or not.
