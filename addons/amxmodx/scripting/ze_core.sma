@@ -32,9 +32,7 @@ enum
 }
 
 // Variables
-new g_iAliveHumansNum, 
-	g_iAliveZombiesNum, 
-	g_iRoundTime, 
+new g_iRoundTime, 
 	g_iHumansScore, 
 	g_iZombiesScore, 
 	g_iRoundNum,
@@ -174,7 +172,9 @@ public plugin_init()
 	hook_cvar_change(g_pCvarZombieSpeed, "fw_Cvar_DirectSet_Post")
 	hook_cvar_change(g_pCvarHumanSpeedFactor, "fw_Cvar_DirectSet_Post")
 	hook_cvar_change(g_pCvarZombieKnockback, "fw_Cvar_DirectSet_Post")
-	
+	hook_cvar_change(g_pCvarRoundTime, "fw_Cvar_DirectSet_Post")
+	hook_cvar_change(g_pCvarFreezeTime, "fw_Cvar_DirectSet_Post")
+
 	// Check Round Time to Terminate it
 	set_task(1.0, "Check_RoundTimeleft", ROUND_TIME_LEFT, _, _, "b")
 }
@@ -187,7 +187,7 @@ public plugin_cfg()
 	server_cmd("exec %s/zombie_escape.cfg", szCfgDir)
 	
 	// Set Game Name
-	new szGameName[64]
+	new szGameName[MAX_NAME_LENGTH]
 	formatex(szGameName, sizeof(szGameName), "Zombie Escape v%s", ZE_VERSION)
 	set_member_game(m_GameDesc, szGameName)
 	
@@ -198,27 +198,22 @@ public plugin_cfg()
 	// Create our Trie to store SteamIDs in.
 	g_tChosenPlayers = TrieCreate()
 
-	// Delay some settings
-	set_task(0.1, "DelaySettings")
+	// Delay needed to replace value in CVar game.
+	set_task(0.1, "delayReplaceCVar")
 }
 
-public DelaySettings()
+public delayReplaceCVar()
 {
-	// Set some cvars, not allowed to be changed from any other .cfg file (Not recommended to remove them)
-	new pCvarRoundTime, pCvarFreezeTime, pCvarMaxSpeed
-	
-	pCvarRoundTime = get_cvar_pointer("mp_roundtime")
-	pCvarFreezeTime = get_cvar_pointer("mp_freezetime")
-	pCvarMaxSpeed = get_cvar_pointer("sv_maxspeed")
-	
-	set_pcvar_num(pCvarRoundTime, get_pcvar_num(g_pCvarRoundTime))
-	set_pcvar_num(pCvarFreezeTime, get_pcvar_num(g_pCvarFreezeTime))
-	
-	// Max speed at least equal to zombies speed. Here zombies speed assumed to be higher than humans one.
-	if (get_pcvar_num(pCvarMaxSpeed) < get_pcvar_num(g_pCvarZombieSpeed))
+	// Replace CVars.
+	set_cvar_num("mp_freezetime", get_pcvar_num(g_pCvarFreezeTime))
+	set_cvar_num("mp_roundtime", get_pcvar_num(g_pCvarRoundTime))
+
+	// Value in sv_maxspeed is less from value exist in ze_zombie_speed?
+	if (get_cvar_float("sv_maxspeed") < g_flZombieSpeed)
 	{
-		set_pcvar_num(pCvarMaxSpeed, get_pcvar_num(g_pCvarZombieSpeed))
-	}
+		// Replace value.
+		set_cvar_float("sv_maxspeed", g_flZombieSpeed)
+	}	
 }
 
 // Hook called when changing the value in "CVar's" of this plugin.
@@ -234,11 +229,22 @@ public fw_Cvar_DirectSet_Post(pCvar_Handle, const szOld_Value[], const szNew_Val
 	{
 		// Store the new value in global variable.
 		g_flZombieSpeed = str_to_float(szNew_Value)
+		set_cvar_string("sv_maxspeed", szNew_Value)
 	}
 	else if (pCvar_Handle == g_pCvarHumanSpeedFactor) // Check CVar is "ze_human_speed_factor"
 	{
 		// Store the new value in global variable.
 		g_flHumanSpeedFactor = str_to_float(szNew_Value) 
+	}
+	else if (pCvar_Handle == g_pCvarRoundTime) // Check CVar is "ze_round_time"
+	{
+		// Replace value in CVar roundtime.
+		set_cvar_string("mp_roundtime", szNew_Value)
+	}
+	else if (pCvar_Handle == g_pCvarFreezeTime) // Check CVar is "ze_freeze_time"
+	{
+		// Replace value in CVar freezetime
+		set_cvar_string("mp_freezetime", szNew_Value)
 	}
 }
 
@@ -254,12 +260,11 @@ public Fw_CheckMapConditions_Post()
 	set_member_game(m_iRoundTime, floatround(get_pcvar_float(g_pCvarRoundTime) * 60.0))
 }
 
+// Hook called after player killed.
 public Fw_PlayerKilled_Post(id)
 {
-	g_iAliveHumansNum = GetAlivePlayersNum(CsTeams:TEAM_CT)
-	g_iAliveZombiesNum = GetAlivePlayersNum(CsTeams:TEAM_TERRORIST)
-	
-	if (g_iAliveHumansNum == 0 && g_iAliveZombiesNum == 0)
+	// Nobody alive?
+	if (!GetAlivePlayersNum(CS_TEAM_T) && !GetAlivePlayersNum(CS_TEAM_CT))
 	{
 		// No Winner, All Players in one team killed Or Both teams Killed
 		client_print(0, print_center, "%L", LANG_PLAYER, "NO_WINNER")
@@ -404,6 +409,10 @@ public Fw_TraceAttack_Pre(iVictim, iAttacker, Float:flDamage, Float:flDirection[
 	if (get_member(iAttacker, m_iTeam) == get_member(iVictim, m_iTeam))
 		return HC_CONTINUE // Prevent execute rest of codes and continue Trace attack.
 	
+	// Round has over?
+	if (g_bIsRoundEnding)
+		return HC_SUPERCEDE // Prevent executre rest of codes and prevent Trace attack.
+
 	// Check attacker is Zombie?
 	if (g_bIsZombie[iAttacker])
 	{		
@@ -455,7 +464,7 @@ public Fw_TakeDamage_Post(iVictim, iInflictor, iAttacker, Float:flDamage, bitsDa
 public Round_End()
 {
 	// Check round is already ended?
-	if (g_bIsRoundEnding)
+	if (g_bIsRoundEnding || !g_bGameStarted)
 		return // Prevent execute rest of codes.
 
 	// Get the number of alive players (Humans and Zombies)
@@ -492,9 +501,15 @@ public Round_Start()
 
 public Check_RoundTimeleft()
 {
-	new Float:flRoundTimeLeft = (g_flReferenceTime + float(g_iRoundTime)) - get_gametime()
+	// Round has over?
+	if (g_bIsRoundEnding)
+		return // Prevent execute rest of codes.
+
+	// Get round time left.
+	static Float:flRoundTimeLeft;flRoundTimeLeft = (g_flReferenceTime + float(g_iRoundTime)) - get_gametime()
 	
-	if (floatround(flRoundTimeLeft) == 0 && !g_bIsRoundEnding)
+	// Round has over?
+	if (!floatround(flRoundTimeLeft))
 	{		
 		// Finish round and make Zombies are winners and update Zombies score.
 		finish_Round(ZE_TEAM_ZOMBIE)
@@ -511,8 +526,6 @@ public client_disconnected(id)
 	g_bIsGravityUsed[id] = false
 	g_flUserKnockback[id] = 0.0
 	g_iUserGravity[id] = 0
-	
-	remove_task(id)
 	
 	// Execute our disconnected forward
 	ExecuteForward(g_iForwards[FORWARD_DISCONNECT], g_iFwReturn, id)
@@ -582,58 +595,56 @@ public Check_AlivePlayers()
 public client_putinserver(id)
 {
 	// Add Delay and Check Conditions To start the Game (Delay needed)
-	set_task(1.0, "Check_AllPlayersNumber", _, _, _, "b")
-	
-	// Check for dead terrorists - Bug fix
-	set_task(0.1, "CheckTerrorists", id, _, _, "b")
+	set_task(1.0, "Check_AllPlayersNumber")
 }
 
-public CheckTerrorists(id)
+// Hook called after display Teams Menu for player.
+public Fw_HandleMenu_ChoosedAppearance_Post(const id, const slot)
 {
-	if (g_bEnteredNotChoosed[id] && g_bGameStarted)
-	{
-		if (is_user_connected(id))
-		{
-			rg_join_team(id, TEAM_CT) // Force user to choose CT
-			g_bEnteredNotChoosed[id] = false
-		}
-	}
+	g_bEnteredNotChoosed[id] = false
 }
 
-public Fw_HandleMenu_ChoosedAppearance_Post(const index, const slot)
-{
-	g_bEnteredNotChoosed[index] = false
-}
-
+// Hook called after player choose team from Teams Menu.
 public Fw_HandleMenu_ChooseTeam_Post(id, MenuChooseTeam:iSlot)
 {
-	// Fixing Dead-T restarting the round
-	if (iSlot == MenuChoose_T) // Choosed T, Still not choosed a player
+	// Player not found?
+	if (!is_user_connected(id))
+		return // Prevent execute rest of codes.
+
+	// Check team chosen is Terrorists team?
+	if (iSlot == MenuChoose_T)
 	{
+		// Player has chosen the team.
 		g_bEnteredNotChoosed[id] = true
+
+		// Switch player to CTs team.
+		rg_join_team(id, TEAM_CT)
 	}
 	
-	if ((iSlot == MenuChoose_AutoSelect) && (get_member(id, m_iTeam) == TEAM_TERRORIST))
+	// Check player has chosen random team?
+	if (iSlot == MenuChoose_AutoSelect)
 	{
+		// Player has chosen the team.
 		g_bEnteredNotChoosed[id] = true
+
+		// Switch player to CTs team.
+		rg_join_team(id, TEAM_CT)
 	}
 	
 	// Add Delay and Check Conditions To start the Game (Delay needed)
-	set_task(1.0, "Check_AllPlayersNumber", _, _, _, "b")
+	set_task(1.0, "Check_AllPlayersNumber")
 }
 
-public Check_AllPlayersNumber(TaskID)
+public Check_AllPlayersNumber()
 {
+	// Game is already started?
 	if (g_bGameStarted)
-	{
-		// If game started remove the task and block the blew Checks
-		remove_task(TaskID)
 		return
-	}
 	
-	if (GetAllAlivePlayersNum() >= get_pcvar_num(g_pCvarReqPlayers))
+	// Required players are exists?
+	if (get_playersnum_ex(GetPlayers_ExcludeDead) >= get_pcvar_num(g_pCvarReqPlayers))
 	{
-		// Players In server == The Required so game started is true
+		// Start game.
 		g_bGameStarted = true
 		
 		// Restart the game
@@ -641,9 +652,6 @@ public Check_AllPlayersNumber(TaskID)
 		
 		// Print Fake game Commencing Message
 		client_print(0, print_center, "%L", LANG_PLAYER, "START_GAME")
-		
-		// Remove the task
-		remove_task(TaskID)
 	}
 }
 
@@ -799,8 +807,8 @@ public Message_Teamscore()
 	
 	switch (szTeam[0])
 	{
-		case 'C': set_msg_arg_int(2, get_msg_argtype(2), g_iHumansScore)
-		case 'T': set_msg_arg_int(2, get_msg_argtype(2), g_iZombiesScore)
+		case 'C': set_msg_arg_int(2, ARG_BYTE, g_iHumansScore)
+		case 'T': set_msg_arg_int(2, ARG_BYTE, g_iZombiesScore)
 	}
 }
 
