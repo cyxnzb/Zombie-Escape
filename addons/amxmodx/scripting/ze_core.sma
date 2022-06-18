@@ -5,6 +5,7 @@ enum _:TOTAL_FORWARDS
 {
 	FORWARD_NONE = 0,
 	FORWARD_ROUNDEND,
+	FORWARD_HUMANIZED_PRE,
 	FORWARD_HUMANIZED,
 	FORWARD_SPAWN_POST,
 	FORWARD_PRE_INFECTED,
@@ -127,15 +128,15 @@ public plugin_init()
 	register_logevent("Round_End", 2, "1=Round_End")
 	
 	// Create Forwards
-	g_iForwards[FORWARD_NONE] = EOS
-	g_iForwards[FORWARD_ROUNDEND] = CreateMultiForward("ze_roundend", ET_IGNORE, FP_CELL)
-	g_iForwards[FORWARD_HUMANIZED] = CreateMultiForward("ze_user_humanized", ET_IGNORE, FP_CELL)
-	g_iForwards[FORWARD_PRE_INFECTED] = CreateMultiForward("ze_user_infected_pre", ET_CONTINUE, FP_CELL, FP_CELL, FP_CELL)
-	g_iForwards[FORWARD_INFECTED] = CreateMultiForward("ze_user_infected", ET_IGNORE, FP_CELL, FP_CELL)
-	g_iForwards[FORWARD_GAME_STARTED_PRE] = CreateMultiForward("ze_game_started_pre", ET_CONTINUE)
-	g_iForwards[FORWARD_GAME_STARTED] = CreateMultiForward("ze_game_started", ET_IGNORE)
-	g_iForwards[FORWARD_DISCONNECT] = CreateMultiForward("ze_player_disconnect", ET_CONTINUE, FP_CELL)
-	g_iForwards[FORWARD_SPAWN_POST] = CreateMultiForward("ze_player_spawn_post", ET_IGNORE, FP_CELL)
+	g_iForwards[FORWARD_ROUNDEND] 			= CreateMultiForward("ze_roundend", ET_IGNORE, FP_CELL)
+	g_iForwards[FORWARD_HUMANIZED_PRE]		= CreateMultiForward("ze_user_humanized_pre", ET_CONTINUE, FP_CELL)
+	g_iForwards[FORWARD_HUMANIZED] 			= CreateMultiForward("ze_user_humanized", ET_IGNORE, FP_CELL)
+	g_iForwards[FORWARD_PRE_INFECTED] 		= CreateMultiForward("ze_user_infected_pre", ET_CONTINUE, FP_CELL, FP_CELL, FP_CELL)
+	g_iForwards[FORWARD_INFECTED] 			= CreateMultiForward("ze_user_infected", ET_IGNORE, FP_CELL, FP_CELL)
+	g_iForwards[FORWARD_GAME_STARTED_PRE] 	= CreateMultiForward("ze_game_started_pre", ET_CONTINUE)
+	g_iForwards[FORWARD_GAME_STARTED] 		= CreateMultiForward("ze_game_started", ET_IGNORE)
+	g_iForwards[FORWARD_DISCONNECT] 		= CreateMultiForward("ze_player_disconnect", ET_CONTINUE, FP_CELL)
+	g_iForwards[FORWARD_SPAWN_POST] 		= CreateMultiForward("ze_player_spawn_post", ET_IGNORE, FP_CELL)
 	
 	// Registering Messages
 	register_message(get_user_msgid("TeamScore"), "Message_Teamscore")
@@ -666,19 +667,35 @@ public Check_AllPlayersNumber()
 
 Set_User_Human(id)
 {
+	// Player not alive?
 	if (!is_user_alive(id))
-		return
+		return false
 	
+	// Execute forward ze_user_humanized_pre(id) and get return value.
+	ExecuteForward(g_iForwards[FORWARD_HUMANIZED_PRE], g_iFwReturn, id)
+
+	// Forward has return value 1 or above?
+	if (g_iFwReturn >= ZE_STOP)
+		return false
+
+	// Unset player Zombie flag.
 	g_bIsZombie[id] = false
+
+	// Set player custom health and gravity.
 	set_entvar(id, var_health, get_pcvar_float(g_pCvarHumanHealth))
 	set_entvar(id, var_gravity, float(g_bIsGravityUsed[id] ? g_iUserGravity[id]:get_pcvar_num(g_pCvarHumanGravity))/800.0)
-	ExecuteForward(g_iForwards[FORWARD_HUMANIZED], g_iFwReturn, id)
 	
-	// Reset Nightvision (Useful for antidote, so when someone use sethuman native the nightvision also reset)
-	Set_NightVision(id, 0, 0, 0x0000, 0, 0, 0, 0)
+	// Execute forward ze_user_humanized(id)
+	ExecuteForward(g_iForwards[FORWARD_HUMANIZED], _/* Ignore return value */, id)
 	
-	if (get_member(id, m_iTeam) != TEAM_CT)
+	// Player not from CTs team?
+	if (TeamName:get_user_team(id) != TEAM_CT)
+	{
+		// Switch player to CTs team.
 		rg_set_user_team(id, TEAM_CT, MODEL_UNASSIGNED)
+	}
+
+	return true
 }
 
 Set_User_Zombie(id, iAttacker = 0, Float:flDamage = 0.0)
@@ -715,7 +732,7 @@ Set_User_Zombie(id, iAttacker = 0, Float:flDamage = 0.0)
 	rg_give_item(id, "weapon_knife", GT_APPEND)
 
 	// Execute forward ze_user_infected(iVictim, iInfector)
-	ExecuteForward(g_iForwards[FORWARD_INFECTED], g_iFwReturn, id, iAttacker)
+	ExecuteForward(g_iForwards[FORWARD_INFECTED], _/* Ignore return value */, id, iAttacker)
 	
 	// Player not from Terrorists team?
 	if (TeamName:get_user_team(id) != TEAM_TERRORIST)
