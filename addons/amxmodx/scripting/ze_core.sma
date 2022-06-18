@@ -79,6 +79,7 @@ new Trie:g_tChosenPlayers
 public plugin_natives()
 {
 	register_native("ze_is_user_zombie", "native_ze_is_user_zombie", 1)
+	register_native("ze_is_user_zombie_ex", "native_ze_is_user_zombie_ex", 1)
 	register_native("ze_is_game_started", "native_ze_is_game_started", 1)
 	
 	register_native("ze_get_round_number", "native_ze_get_round_number", 1)
@@ -856,7 +857,9 @@ public Message_Teamscore()
 	}
 }
 
-// Natives
+/**
+ * Functions of natives:
+ */
 public native_ze_is_user_zombie(id)
 {
 	if (!is_user_connected(id))
@@ -864,6 +867,11 @@ public native_ze_is_user_zombie(id)
 		return -1;
 	}
 	
+	return g_bIsZombie[id]
+}
+
+public native_ze_is_user_zombie_ex(id)
+{
 	return g_bIsZombie[id]
 }
 
