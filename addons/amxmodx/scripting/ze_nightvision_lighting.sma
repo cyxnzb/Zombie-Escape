@@ -24,7 +24,7 @@ enum
 public plugin_init()
 {
 	// Load plugin.
-	register_plugin("[ZE] Nightvision/Lighting", ZE_VERSION, AUTHORS, "http://github.com/raheem-cs/Zombie-Escape", "Zombies Nightvision and Map lighting style changer")
+	register_plugin("[ZE] Nightvision/Lighting", ZE_VERSION, AUTHORS, ZE_HOMEURL, "Zombies Nightvision and Map lighting style changer")
 	
 	// Hook Chains.
 	RegisterHookChain(RG_CBasePlayer_Killed, "Fw_PlayerKilled_Post", 1)
