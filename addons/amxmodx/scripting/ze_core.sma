@@ -25,7 +25,7 @@ enum
 }
 
 // Colors (g_pCvarColors[] array indexes)
-enum
+enum _:COLORS
 {
 	Red = 0,
 	Green,
@@ -37,6 +37,15 @@ new g_iRoundTime,
 	g_iHumansScore, 
 	g_iZombiesScore, 
 	g_iRoundNum,
+	g_iFreezeTime,
+	g_iRequiredPlayers,
+	g_iScoreMessageType,
+	g_iScoreMessageColors[COLORS],
+	g_iWinMessageType,
+	g_iHumanHealth,
+	g_iHumanGravity,
+	g_iZombieHealth,
+	g_iZombieGravity,
 	g_iHSpeedFactor[33],
 	g_iZSpeedSet[33],
 	g_iUserGravity[33],
@@ -46,32 +55,13 @@ new g_iRoundTime,
 	bool:g_bIsRoundEnding,
 	bool:g_bHSpeedUsed[33], 
 	bool:g_bZSpeedUsed[33],
-	bool:g_bIsKnockBackUsed[33],
 	bool:g_bIsGravityUsed[33],
 	bool:g_bEnteredNotChoosed[33],
 	bool:g_bRespawnAsZombie[33],
 	Float:g_flReferenceTime,
 	Float:g_flZombieSpeed,
 	Float:g_flHumanSpeedFactor,
-	Float:g_flZombieKnockback,
-	Float:g_flUserKnockback[33]
-
-// Cvars
-new	g_pCvarHumanSpeedFactor, 
-	g_pCvarHumanGravity, 
-	g_pCvarHumanHealth, 
-	g_pCvarZombieSpeed, 
-	g_pCvarZombieGravity,
-	g_pCvarFreezeTime, 
-	g_pCvarRoundTime, 
-	g_pCvarReqPlayers, 
-	g_pCvarZombieHealth, 
-	g_pCvarZombieKnockback, 
-	g_pCvarScoreMessageType, 
-	g_pCvarColors[3],
-	g_pCvarRoundEndDelay,
-	g_pCvarWinMessageType,
-	g_pCvarDeathMsgColor
+	Float:g_flRoundEndDelay
 	
 // Trie's.
 new Trie:g_tChosenPlayers
@@ -96,10 +86,6 @@ public plugin_natives()
 	register_native("ze_reset_human_speed", "native_ze_reset_human_speed", 1)
 	register_native("ze_reset_zombie_speed", "native_ze_reset_zombie_speed", 1)
 	
-	register_native("ze_get_user_knockback", "native_ze_get_user_knockback", 1)
-	register_native("ze_set_user_knockback", "native_ze_set_user_knockback", 1)
-	register_native("ze_reset_user_knockback", "native_ze_reset_user_knockback", 1)
-	
 	register_native("ze_set_user_gravity", "native_ze_set_user_gravity", 1)
 	register_native("ze_reset_user_gravity", "native_ze_reset_user_gravity", 1)
 
@@ -109,7 +95,7 @@ public plugin_natives()
 
 public plugin_init()
 {
-	register_plugin("[ZE] Core/Engine", ZE_VERSION, AUTHORS)
+	register_plugin("[ZE] Core/Engine", ZE_VERSION, AUTHORS, ZE_HOMEURL, "Zombie Escape APIs")
 	
 	// Hook Chains
 	RegisterHookChain(RG_CBasePlayer_TraceAttack, "Fw_TraceAttack_Pre", 0)
@@ -145,44 +131,54 @@ public plugin_init()
 	// Sequential files (.txt)
 	register_dictionary("zombie_escape.txt")
 	
-	// Humans Cvars
-	g_pCvarHumanSpeedFactor 	= register_cvar("ze_human_speed_factor", "20.0")
-	g_pCvarHumanGravity 		= register_cvar("ze_human_gravity", "800")
-	g_pCvarHumanHealth 			= register_cvar("ze_human_health", "1000")
-	
-	// Zombie Cvars
-	g_pCvarZombieSpeed 			= register_cvar("ze_zombie_speed", "350.0")
-	g_pCvarZombieGravity 		= register_cvar("ze_zombie_gravity", "640")
-	g_pCvarZombieHealth 		= register_cvar("ze_zombie_health", "10000")
-	g_pCvarZombieKnockback 		= register_cvar("ze_zombie_knockback", "300.0")
-	
-	// General Cvars
-	g_pCvarFreezeTime 			= register_cvar("ze_freeze_time", "20")
-	g_pCvarRoundTime 			= register_cvar("ze_round_time", "9.0")
-	g_pCvarReqPlayers 			= register_cvar("ze_required_players", "2")
-	g_pCvarScoreMessageType 	= register_cvar("ze_score_message_type", "1")
-	g_pCvarColors[Red] 			= register_cvar("ze_score_message_red", "200")
-	g_pCvarColors[Green] 		= register_cvar("ze_score_message_green", "100")
-	g_pCvarColors[Blue] 		= register_cvar("ze_score_message_blue", "0")
-	g_pCvarRoundEndDelay 		= register_cvar("ze_round_end_delay", "5")
-	g_pCvarWinMessageType 		= register_cvar("ze_winmessage_type", "0")
-	g_pCvarDeathMsgColor 		= register_cvar("ze_deathmsg_skull", "0")
+	// Create new CVars.
+	new pCvar_flZombieSpeed = create_cvar("ze_zombie_speed", "350.0")
+	new pCvar_iFreezeTime = create_cvar("ze_freeze_time", "20")
+	new pCvar_iRoundTime = create_cvar("ze_round_time", "9.0")
 
-	// Bind CVars (Store the value in CVars in global variables.).
-	bind_pcvar_float(g_pCvarZombieSpeed, g_flZombieSpeed)
-	bind_pcvar_float(g_pCvarHumanSpeedFactor, g_flHumanSpeedFactor)
-	bind_pcvar_float(g_pCvarZombieKnockback, g_flZombieKnockback)
+	// Create new CVars and Bind CVars (Store automatically new value in Global Variables).
+	bind_pcvar_num(pCvar_iFreezeTime, g_iFreezeTime)
+	bind_pcvar_num(pCvar_iRoundTime, g_iRoundTime)
+	bind_pcvar_num(create_cvar("ze_human_health", "1000"), g_iHumanHealth)
+	bind_pcvar_num(create_cvar("ze_human_gravity", "800"), g_iHumanGravity)
+	bind_pcvar_float(create_cvar("ze_human_speed_factor", "20.0"), g_flHumanSpeedFactor)
+	bind_pcvar_num(create_cvar("ze_zombie_health", "10000"), g_iZombieHealth)
+	bind_pcvar_num(create_cvar("ze_zombie_gravity", "640"), g_iZombieGravity)
+	bind_pcvar_float(pCvar_flZombieSpeed, g_flZombieSpeed)
+	bind_pcvar_num(create_cvar("ze_required_players", "2"), g_iRequiredPlayers)
+	bind_pcvar_num(create_cvar("ze_score_message_type", "1"), g_iScoreMessageType)
+	bind_pcvar_num(create_cvar("ze_score_message_red", "200"), g_iScoreMessageColors[Red])
+	bind_pcvar_num(create_cvar("ze_score_message_green", "100"), g_iScoreMessageColors[Green])
+	bind_pcvar_num(create_cvar("ze_score_message_blue", "0"), g_iScoreMessageColors[Blue])
+	bind_pcvar_float(create_cvar("ze_round_end_delay", "5.0"), g_flRoundEndDelay)
+	bind_pcvar_num(create_cvar("ze_winmessage_type", "0"), g_iWinMessageType)
+	bind_pcvar_num(create_cvar("ze_deathmsg_skull", "0"), g_bSkullGreenColor)
 
-	// Hook's CVars.
-	hook_cvar_change(g_pCvarZombieSpeed, "fw_Cvar_DirectSet_Post")
-	hook_cvar_change(g_pCvarHumanSpeedFactor, "fw_Cvar_DirectSet_Post")
-	hook_cvar_change(g_pCvarZombieKnockback, "fw_Cvar_DirectSet_Post")
-	hook_cvar_change(g_pCvarRoundTime, "fw_Cvar_DirectSet_Post")
-	hook_cvar_change(g_pCvarFreezeTime, "fw_Cvar_DirectSet_Post")
-	hook_cvar_change(g_pCvarDeathMsgColor, "fw_Cvar_DirectSet_Post")
+	// Hooks CVars.
+	hook_cvar_change(pCvar_iFreezeTime, "fw_CVarFreezeTime")
+	hook_cvar_change(pCvar_iRoundTime, "fw_CVarRoundTime")
+	hook_cvar_change(pCvar_flZombieSpeed, "fw_CvarMaxSpeed")
 
 	// Check Round Time to Terminate it
 	set_task(1.0, "Check_RoundTimeleft", ROUND_TIME_LEFT, _, _, "b")
+}
+
+// Hook called when change the value in mp_freezetime.
+public fw_CVarFreezeTime(pCvar, const szOldVal[], const szNewVal[]) {
+	// Replace value in mp_freezetime.
+	set_cvar_string("mp_freezetime", szNewVal)
+}
+
+// Hook called when change the value in mp_roundtime.
+public fw_CVarRoundTime(pCvar, const szOldVal[], const szNewVal[]) {
+	// Replace value in mp_roundtime.
+	set_cvar_string("mp_roundtime", szNewVal)
+}
+
+// Hook called when change the value in ze_zombie_speed.
+public fw_CvarMaxSpeed(pCvar, const szOldVal[], const szNewVal[]) {
+	// Replace value in sv_maxspeed.
+	set_cvar_string("sv_maxspeed", szNewVal)	
 }
 
 public plugin_cfg()
@@ -204,59 +200,10 @@ public plugin_cfg()
 	// Create our Trie to store SteamIDs in.
 	g_tChosenPlayers = TrieCreate()
 
-	// Delay needed to replace value in CVar game.
-	set_task(0.1, "delayReplaceCVar")
-}
-
-public delayReplaceCVar()
-{
-	// Replace CVars.
-	set_cvar_num("mp_freezetime", get_pcvar_num(g_pCvarFreezeTime))
-	set_cvar_num("mp_roundtime", get_pcvar_num(g_pCvarRoundTime))
-
-	// Value in sv_maxspeed is less from value exist in ze_zombie_speed?
-	if (get_cvar_float("sv_maxspeed") < g_flZombieSpeed)
-	{
-		// Replace value.
-		set_cvar_float("sv_maxspeed", g_flZombieSpeed)
-	}	
-}
-
-// Hook called when changing the value in "CVar's" of this plugin.
-public fw_Cvar_DirectSet_Post(pCvar_Handle, const szOld_Value[], const szNew_Value[])
-{
-	// Check CVar is "ze_zombie_knockback"?
-	if (pCvar_Handle == g_pCvarZombieKnockback)
-	{
-		// Store the new value in global variable.
-		g_flZombieKnockback = str_to_float(szNew_Value)
-	}
-	else if (pCvar_Handle == g_pCvarZombieSpeed) // Check CVar is "ze_zombie_speed"
-	{
-		// Store the new value in global variable.
-		g_flZombieSpeed = str_to_float(szNew_Value)
-		set_cvar_string("sv_maxspeed", szNew_Value)
-	}
-	else if (pCvar_Handle == g_pCvarHumanSpeedFactor) // Check CVar is "ze_human_speed_factor"
-	{
-		// Store the new value in global variable.
-		g_flHumanSpeedFactor = str_to_float(szNew_Value) 
-	}
-	else if (pCvar_Handle == g_pCvarRoundTime) // Check CVar is "ze_round_time"
-	{
-		// Replace value in CVar roundtime.
-		set_cvar_string("mp_roundtime", szNew_Value)
-	}
-	else if (pCvar_Handle == g_pCvarFreezeTime) // Check CVar is "ze_freeze_time"
-	{
-		// Replace value in CVar freezetime
-		set_cvar_string("mp_freezetime", szNew_Value)
-	}
-	else if (pCvar_Handle == g_pCvarDeathMsgColor)
-	{
-		// Check death message green color is Enabled?
-		g_bSkullGreenColor = (str_to_num(szNew_Value) != 0) ? true : false
-	}
+	// Replace CVars values.
+	set_cvar_num("mp_roundtime", g_iRoundTime)
+	set_cvar_num("mp_freezetime", g_iFreezeTime)
+	set_cvar_float("sv_maxspeed", g_flZombieSpeed)	
 }
 
 public Fw_CheckMapConditions_Post()
@@ -265,10 +212,10 @@ public Fw_CheckMapConditions_Post()
 	set_member_game(m_bGameStarted, true)
 	
 	// Set Freeze Time
-	set_member_game(m_iIntroRoundTime, get_pcvar_num(g_pCvarFreezeTime))
+	set_member_game(m_iIntroRoundTime, g_iFreezeTime)
 	
 	// Set Round Time
-	set_member_game(m_iRoundTime, floatround(get_pcvar_float(g_pCvarRoundTime) * 60.0))
+	set_member_game(m_iRoundTime, floatround(g_iRoundTime * 60.0))
 }
 
 // Hook called after player killed.
@@ -382,7 +329,7 @@ public New_Round()
 	if (!g_bGameStarted)
 	{
 		// No Enough Players
-		ze_colored_print(0, "%L", LANG_PLAYER, "NO_ENOUGH_PLAYERS", get_pcvar_num(g_pCvarReqPlayers))
+		ze_colored_print(0, "%L", LANG_PLAYER, "NO_ENOUGH_PLAYERS", g_iRequiredPlayers)
 		return // Block the execution of the blew code 
 	}
 	
@@ -400,16 +347,16 @@ public New_Round()
 public Score_Message(TaskID)
 {
 	// If value is 0, there is nothing to do for this case this means CVAR is disabled
-	switch (get_pcvar_num(g_pCvarScoreMessageType))
+	switch (g_iScoreMessageType)
 	{
 		case 1: // DHUD
 		{
-			set_dhudmessage(get_pcvar_num(g_pCvarColors[Red]), get_pcvar_num(g_pCvarColors[Green]), get_pcvar_num(g_pCvarColors[Blue]), -1.0, 0.01, 0, 0.0, 9.0)
+			set_dhudmessage(g_iScoreMessageColors[Red], g_iScoreMessageColors[Green], g_iScoreMessageColors[Blue], -1.0, 0.01, 0, 0.0, 9.0)
 			show_dhudmessage(0, "%L", LANG_PLAYER, "SCORE_MESSAGE", g_iZombiesScore, g_iHumansScore)
 		}
 		case 2: // HUD
 		{
-			set_hudmessage(get_pcvar_num(g_pCvarColors[Red]), get_pcvar_num(g_pCvarColors[Green]), get_pcvar_num(g_pCvarColors[Blue]), -1.0, 0.01, 0, 0.0, 9.0)
+			set_hudmessage(g_iScoreMessageColors[Red], g_iScoreMessageColors[Green], g_iScoreMessageColors[Blue], -1.0, 0.01, 0, 0.0, 9.0)
 			show_hudmessage(0, "%L", LANG_PLAYER, "SCORE_MESSAGE", g_iZombiesScore, g_iHumansScore)
 		}
 	}
@@ -457,19 +404,6 @@ public Fw_TakeDamage_Post(iVictim, iInflictor, iAttacker, Float:flDamage, bitsDa
 	{
 		// Pain Shock Free!
 		set_member(iVictim, m_flVelocityModifier, 1.0)
-		
-		// Knockback is disabled from native.
-		if (g_bIsKnockBackUsed[iVictim] && g_flUserKnockback[iVictim] <= 0.0)
-			return HC_CONTINUE // Prevent execute rest of codes.
-
-		// Knockback has disabled from CVar?
-		if (g_flZombieKnockback <= 0.0)
-			return HC_CONTINUE // Prevent execute rest of codes.
-
-		// Set Knockback
-		static Float:flOrigin[3]
-		get_entvar(iAttacker, var_origin, flOrigin)
-		Set_Knockback(iVictim, flOrigin, g_bIsKnockBackUsed[iVictim] ? g_flUserKnockback[iVictim] : g_flZombieKnockback, 2)
 	}
 	
 	return HC_CONTINUE
@@ -504,7 +438,7 @@ public Event_RoundEnd_Pre(WinStatus:status, ScenarioEventEndRound:event, Float:t
 	// The two unhandeld cases by rg_round_end() native in our Mod
 	if (event == ROUND_CTS_WIN || event == ROUND_TERRORISTS_WIN)
 	{
-		SetHookChainArg(3, ATYPE_FLOAT, get_pcvar_float(g_pCvarRoundEndDelay))
+		SetHookChainArg(3, ATYPE_FLOAT, g_flRoundEndDelay)
 	}
 }
 
@@ -537,9 +471,7 @@ public client_disconnected(id)
 	// Reset speed for this dropped id
 	g_bHSpeedUsed[id] = false
 	g_bZSpeedUsed[id] = false
-	g_bIsKnockBackUsed[id] = false
 	g_bIsGravityUsed[id] = false
-	g_flUserKnockback[id] = 0.0
 	g_iUserGravity[id] = 0
 	
 	// Execute our disconnected forward
@@ -563,7 +495,7 @@ public Check_AlivePlayers()
 		new iZombiesNum = get_member_game(m_iNumTerrorist)
 
 		// Required players not found?
-		if ((iHumansNum + iZombiesNum) < get_pcvar_num(g_pCvarReqPlayers))
+		if ((iHumansNum + iZombiesNum) < g_iRequiredPlayers)
 		{
 			// Stop game.
 			g_bGameStarted = false
@@ -657,7 +589,7 @@ public Check_AllPlayersNumber()
 		return
 	
 	// Required players are exists?
-	if (get_playersnum_ex(GetPlayers_ExcludeDead) >= get_pcvar_num(g_pCvarReqPlayers))
+	if (get_playersnum_ex(GetPlayers_ExcludeDead) >= g_iRequiredPlayers)
 	{
 		// Start game.
 		g_bGameStarted = true
@@ -687,8 +619,8 @@ Set_User_Human(id)
 	g_bIsZombie[id] = false
 
 	// Set player custom health and gravity.
-	set_entvar(id, var_health, get_pcvar_float(g_pCvarHumanHealth))
-	set_entvar(id, var_gravity, float(g_bIsGravityUsed[id] ? g_iUserGravity[id]:get_pcvar_num(g_pCvarHumanGravity))/800.0)
+	set_entvar(id, var_health, float(g_iHumanHealth))
+	set_entvar(id, var_gravity, float(g_bIsGravityUsed[id] ? g_iUserGravity[id]:g_iHumanGravity)/800.0)
 	
 	// Execute forward ze_user_humanized(id)
 	ExecuteForward(g_iForwards[FORWARD_HUMANIZED], _/* Ignore return value */, id)
@@ -729,8 +661,8 @@ Set_User_Zombie(id, iAttacker = 0, Float:flDamage = 0.0)
 	g_bIsZombie[id] = true
 
 	// Set player custom health and gravity
-	set_entvar(id, var_health, get_pcvar_float(g_pCvarZombieHealth))
-	set_entvar(id, var_gravity, float(g_bIsGravityUsed[id] ? g_iUserGravity[id] : get_pcvar_num(g_pCvarZombieGravity))/800.0)
+	set_entvar(id, var_health, float(g_iZombieHealth))
+	set_entvar(id, var_gravity, float(g_bIsGravityUsed[id] ? g_iUserGravity[id] : (g_iZombieGravity))/800.0)
 
 	// Remove player all weapons and items and him knife only.
 	rg_remove_all_items(id)
@@ -754,9 +686,6 @@ finish_Round(iTeam)
 	// Round over.
 	g_bIsRoundEnding = true
 
-	// Get round end delay
-	new Float:flRoundEndDelay = get_pcvar_float(g_pCvarRoundEndDelay)
-
 	// Choose team:
 	switch (iTeam)
 	{
@@ -766,13 +695,13 @@ finish_Round(iTeam)
 			ExecuteForward(g_iForwards[FORWARD_ROUNDEND], _/* No return value */, ZE_TEAM_HUMAN)
 
 			// Finish the round, and make Humans are winners.
-			rg_round_end(flRoundEndDelay, WINSTATUS_CTS, ROUND_CTS_WIN, "", "")
+			rg_round_end(g_flRoundEndDelay, WINSTATUS_CTS, ROUND_CTS_WIN, "", "")
 
 			// +1 in Humans score.
 			g_iHumansScore++
 
 			// Get HUD type of win message.
-			switch (get_pcvar_num(g_pCvarWinMessageType))
+			switch (g_iScoreMessageType)
 			{
 				case 0: // Normal Text print_center.
 				{
@@ -780,12 +709,12 @@ finish_Round(iTeam)
 				}
 				case 1: // HUD
 				{
-					set_hudmessage(0, 100, 200, -1.0, 0.4, 1, flRoundEndDelay, flRoundEndDelay, 0.0, 0.0)
+					set_hudmessage(0, 100, 200, -1.0, 0.4, 1, g_flRoundEndDelay, g_flRoundEndDelay, 0.0, 0.0)
 					show_hudmessage(0, "%L", LANG_PLAYER, "ESCAPE_SUCCESS")
 				}
 				case 2: // DHUD
 				{
-					set_dhudmessage(0, 100, 200, -1.0, 0.4, 1, flRoundEndDelay, flRoundEndDelay, 0.0, 0.0)
+					set_dhudmessage(0, 100, 200, -1.0, 0.4, 1, g_flRoundEndDelay, g_flRoundEndDelay, 0.0, 0.0)
 					show_dhudmessage(0, "%L", LANG_PLAYER, "ESCAPE_SUCCESS")				
 				}
 			}
@@ -796,13 +725,13 @@ finish_Round(iTeam)
 			ExecuteForward(g_iForwards[FORWARD_ROUNDEND], _/* No return value */, ZE_TEAM_ZOMBIE)
 
 			// Finish the round, and make Humans are winners.
-			rg_round_end(flRoundEndDelay, WINSTATUS_TERRORISTS, ROUND_TERRORISTS_WIN, "", "")
+			rg_round_end(g_flRoundEndDelay, WINSTATUS_TERRORISTS, ROUND_TERRORISTS_WIN, "", "")
 
 			// +1 in Humans score.
 			g_iZombiesScore++
 
 			// Get HUD type of win message.
-			switch (get_pcvar_num(g_pCvarWinMessageType))
+			switch (g_iScoreMessageType)
 			{
 				case 0: // Normal Text print_center.
 				{
@@ -810,12 +739,12 @@ finish_Round(iTeam)
 				}
 				case 1: // HUD
 				{
-					set_hudmessage(200, 0, 0, -1.0, 0.4, 1, flRoundEndDelay, flRoundEndDelay, 0.0, 0.0)
+					set_hudmessage(200, 0, 0, -1.0, 0.4, 1, g_flRoundEndDelay, g_flRoundEndDelay, 0.0, 0.0)
 					show_hudmessage(0, "%L", LANG_PLAYER, "ESCAPE_FAIL")
 				}
 				case 2: // DHUD
 				{
-					set_dhudmessage(200, 0, 0, -1.0, 0.4, 1, flRoundEndDelay, flRoundEndDelay, 0.0, 0.0)
+					set_dhudmessage(200, 0, 0, -1.0, 0.4, 1, g_flRoundEndDelay, g_flRoundEndDelay, 0.0, 0.0)
 					show_dhudmessage(0, "%L", LANG_PLAYER, "ESCAPE_FAIL")				
 				}
 			}
@@ -976,43 +905,6 @@ public native_ze_reset_zombie_speed(id)
 	return true;
 }
 
-public native_ze_get_user_knockback(id)
-{
-	if (!is_user_connected(id))
-	{
-		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
-		return -1
-	}
-
-	return floatround(g_bIsKnockBackUsed[id] ? g_flUserKnockback[id] : g_flZombieKnockback)
-}
-
-public native_ze_set_user_knockback(id, Float:flKnockback)
-{
-	if (!is_user_connected(id))
-	{
-		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
-		return false
-	}
-	
-	g_bIsKnockBackUsed[id] = true
-	g_flUserKnockback[id] = flKnockback
-	return true
-}
-
-public native_ze_reset_user_knockback(id)
-{
-	if (!is_user_connected(id))
-	{
-		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
-		return false
-	}
-
-	g_bIsKnockBackUsed[id] = false
-	g_flUserKnockback[id] = 0.0
-	return true
-}
-
 public native_ze_set_user_gravity(id, iGravity)
 {
 	if (!is_user_connected(id))
@@ -1037,7 +929,7 @@ public native_ze_reset_user_gravity(id)
 	}
 
 	g_bIsGravityUsed[id] = false
-	set_entvar(id, var_gravity, float(g_bIsZombie[id] ? get_pcvar_num(g_pCvarZombieGravity):get_pcvar_num(g_pCvarHumanGravity)) / 800.0)
+	set_entvar(id, var_gravity, float(g_bIsZombie[id] ? g_iZombieGravity : g_iHumanGravity) / 800.0)
 
 	return true
 }
