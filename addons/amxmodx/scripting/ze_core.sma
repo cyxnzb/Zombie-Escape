@@ -707,7 +707,7 @@ finish_Round(iTeam)
 			g_iHumansScore++
 
 			// Get HUD type of win message.
-			switch (g_iScoreMessageType)
+			switch (g_iWinMessageType)
 			{
 				case 0: // Normal Text print_center.
 				{
@@ -737,7 +737,7 @@ finish_Round(iTeam)
 			g_iZombiesScore++
 
 			// Get HUD type of win message.
-			switch (g_iScoreMessageType)
+			switch (g_iWinMessageType)
 			{
 				case 0: // Normal Text print_center.
 				{
