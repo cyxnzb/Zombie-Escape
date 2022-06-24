@@ -33,7 +33,7 @@ enum _:COLORS
 }
 
 // Variables
-new g_iRoundTime, 
+new g_iRoundTime,
 	g_iHumansScore, 
 	g_iZombiesScore, 
 	g_iRoundNum,
@@ -46,6 +46,7 @@ new g_iRoundTime,
 	g_iHumanGravity,
 	g_iZombieHealth,
 	g_iZombieGravity,
+	g_iRoundTimeLeft,
 	g_iHSpeedFactor[33],
 	g_iZSpeedSet[33],
 	g_iUserGravity[33],
@@ -445,7 +446,7 @@ public Event_RoundEnd_Pre(WinStatus:status, ScenarioEventEndRound:event, Float:t
 public Round_Start()
 {
     g_flReferenceTime = get_gametime()
-    g_iRoundTime = get_member_game(m_iRoundTime)
+    g_iRoundTimeLeft = get_member_game(m_iRoundTime)
 }
 
 public Check_RoundTimeleft()
@@ -455,7 +456,7 @@ public Check_RoundTimeleft()
 		return // Prevent execute rest of codes.
 
 	// Get round time left.
-	static Float:flRoundTimeLeft;flRoundTimeLeft = (g_flReferenceTime + float(g_iRoundTime)) - get_gametime()
+	static Float:flRoundTimeLeft;flRoundTimeLeft = (g_flReferenceTime + float(g_iRoundTimeLeft)) - get_gametime()
 	
 	// Round has over?
 	if (!floatround(flRoundTimeLeft))
