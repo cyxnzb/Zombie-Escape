@@ -1,8 +1,10 @@
 #include <zombie_escape>
 
+// Task ID.
 #define TASK_MESSAGE 2030
 
-enum
+// Enums (Ranks)
+enum _:RANKS
 {
 	RANK_NONE = 0,
 	RANK_FIRST,
@@ -11,84 +13,67 @@ enum
 }
 
 // Colors
-enum
+enum _:COLORS
 {
 	Red = 0,
 	Green,
 	Blue
 }
 
-// Variables
-new g_iMaxClients,
-	g_iSpeedRank,
+// Global Variables.
+new g_iSpeedRank,
 	g_iInfectionMsg,
-	g_iEscapePoints[33],
-	g_iEscapeRank[4],
-	bool:g_bStopRendering[33]
+	g_iRankMode,
+	g_iInfectColors[COLORS],
+	g_iRankColors[COLORS],
+	g_iLeaderGlowColors[COLORS],
+	g_iEscapeRank[RANKS],
+	bool:g_bInfectNotice,
+	bool:g_bLeaderGlow,
+	bool:g_bLeaderGlowRandom,
+	bool:g_bHideHUD[MAX_PLAYERS+1],
+	bool:g_bGlowRendering[MAX_PLAYERS+1],
+	bool:g_bStopRendering[MAX_PLAYERS+1],
+	Float:g_flMaxVelocity,
+	Float:g_flEscapePoints[MAX_PLAYERS+1]
 
-// Cvars
-new g_pCvarInfectNotice, 
-	g_pCvarInfectColors[3],
-	g_pCvarMode,
-	g_pCvarRankColors[3],
-	g_pCvarLeaderGlow,
-	g_pCvarLeaderGlowColors[3],
-	g_pCvarLeaderGlowRandom
-
-public plugin_init()
-{
-	register_plugin("[ZE] Messages", ZE_VERSION, AUTHORS)
-	
-	// Cvars
-	g_pCvarInfectNotice = register_cvar("ze_enable_infect_notice", "1")
-	g_pCvarInfectColors[Red] = register_cvar("ze_infect_notice_red", "255")
-	g_pCvarInfectColors[Green] = register_cvar("ze_infect_notice_green", "0")
-	g_pCvarInfectColors[Blue] = register_cvar("ze_infect_notice_blue", "0")
-	g_pCvarMode = register_cvar("ze_speed_rank_mode", "1")
-	g_pCvarRankColors[Red] = register_cvar("ze_speed_rank_red", "0")
-	g_pCvarRankColors[Green] = register_cvar("ze_speed_rank_green", "255")
-	g_pCvarRankColors[Blue] = register_cvar("ze_speed_rank_blue", "0")
-	g_pCvarLeaderGlow = register_cvar("ze_leader_glow", "1")
-	g_pCvarLeaderGlowColors[Red] = register_cvar("ze_leader_glow_red", "255")
-	g_pCvarLeaderGlowColors[Green] = register_cvar("ze_leader_glow_green", "0")
-	g_pCvarLeaderGlowColors[Blue] = register_cvar("ze_leader_glow_blue", "0")
-	g_pCvarLeaderGlowRandom = register_cvar("ze_leader_random_color", "1")
-	
-	// Messages
-	g_iSpeedRank = CreateHudSyncObj()
-	g_iInfectionMsg = CreateHudSyncObj()
-	
-	// Others
-	g_iMaxClients = get_member_game(m_nMaxPlayers)
-}
-
+// Forward allows registering natives.
 public plugin_natives()
 {
 	register_native("ze_get_escape_leader_id", "native_ze_get_escape_leader_id", 1)
 	register_native("ze_stop_mod_rendering", "native_ze_stop_mod_rendering", 1)
+	register_native("ze_show_user_rankhud", "native_show_user_rankhud", 1)
+	register_native("ze_hide_user_rankhud", "native_hide_user_rankhud", 1)
 }
 
-public ze_user_infected(iVictim, iInfector)
+// Forward called after server activation.
+public plugin_init()
 {
-	if (iInfector == 0) // Server ID
-		return
-		
-	if (get_pcvar_num(g_pCvarInfectNotice))
-	{
-		new szVictimName[32], szAttackerName[32]
-		get_user_name(iVictim, szVictimName, charsmax(szVictimName))
-		get_user_name(iInfector, szAttackerName, charsmax(szAttackerName))
-		set_hudmessage(get_pcvar_num(g_pCvarInfectColors[Red]), get_pcvar_num(g_pCvarInfectColors[Green]), get_pcvar_num(g_pCvarInfectColors[Blue]), 0.05, 0.45, 1, 0.0, 6.0, 0.0, 0.0)
-		ShowSyncHudMsg(0, g_iInfectionMsg, "%L", LANG_PLAYER, "INFECTION_NOTICE", szAttackerName, szVictimName)
-	}
-
-	// Remove human Leader Glow when infected.
-	if (get_pcvar_num(g_pCvarLeaderGlow) && (g_iEscapeRank[RANK_FIRST] == iVictim))
-	{
-		Set_Rendering(iVictim)
-	}	
+	// Load plugin.
+	register_plugin("[ZE] Messages", ZE_VERSION, AUTHORS, ZE_HOMEURL, "Infection notice and Leader/Rank/Damage mode")
+	
+	// Create new CVars and Store automatically new value in CVars when changed.
+	bind_pcvar_num(create_cvar("ze_enable_infect_notice", "1"), g_bInfectNotice)
+	bind_pcvar_num(create_cvar("ze_infect_notice_red", "255"), g_iInfectColors[Red])
+	bind_pcvar_num(create_cvar("ze_infect_notice_green", "0"), g_iInfectColors[Green])
+	bind_pcvar_num(create_cvar("ze_infect_notice_blue", "0"), g_iInfectColors[Blue])
+	bind_pcvar_num(create_cvar("ze_speed_rank_mode", "1"), g_iRankMode)
+	bind_pcvar_num(create_cvar("ze_speed_rank_red", "0"), g_iRankColors[Red])
+	bind_pcvar_num(create_cvar("ze_speed_rank_green", "255"), g_iRankColors[Green])
+	bind_pcvar_num(create_cvar("ze_speed_rank_blue", "0"), g_iRankColors[Blue])
+	bind_pcvar_num(create_cvar("ze_leader_glow", "1"), g_bLeaderGlow)
+	bind_pcvar_num(create_cvar("ze_leader_random_color", "1"), g_bLeaderGlowRandom)
+	bind_pcvar_num(create_cvar("ze_leader_glow_red", "255"), g_iLeaderGlowColors[Red])
+	bind_pcvar_num(create_cvar("ze_leader_glow_green", "0"), g_iLeaderGlowColors[Green])
+	bind_pcvar_num(create_cvar("ze_leader_glow_blue", "0"), g_iLeaderGlowColors[Blue])
+	bind_pcvar_num(get_cvar_pointer("sv_maxvelocity"), g_flMaxVelocity)
+	
+	// Messages
+	g_iSpeedRank = CreateHudSyncObj()
+	g_iInfectionMsg = CreateHudSyncObj()
 }
 
+// Forward called before game started.
 public ze_game_started_pre()
 {
 	// We're used this in ze_game_started_pre(), Because if we put it in ze_gamestarted()
@@ -96,209 +81,305 @@ public ze_game_started_pre()
 	remove_task(TASK_MESSAGE)
 }
 
-public ze_zombie_appear()
+// Forward called after player infected.
+public ze_user_infected(iVictim, iInfector)
 {
-	// Show message when zombies appear to reduce lag
-	set_task(0.3, "Show_Message", TASK_MESSAGE, _, _, "b") // 0.3 Is Enough Delay
-	arrayset(g_iEscapePoints, 0, charsmax(g_iEscapePoints))
+	// Player infected by Server?
+	if (iInfector == 0)
+		return
+		
+	// Infection notice enabled?
+	if (g_bInfectNotice)
+	{
+		// Local Variables.
+		new szVictimName[MAX_NAME_LENGTH], szAttackerName[MAX_NAME_LENGTH]
+
+		// Get name of Victim and Infector.
+		get_user_name(iVictim, szVictimName, charsmax(szVictimName))
+		get_user_name(iInfector, szAttackerName, charsmax(szAttackerName))
+
+		// Show colored HUD for all players.
+		set_hudmessage(g_iInfectColors[Red], g_iInfectColors[Green], g_iInfectColors[Blue], 0.05, 0.45, 1, 0.0, 6.0, 0.0, 0.0)
+		ShowSyncHudMsg(0, g_iInfectionMsg, "%L", LANG_PLAYER, "INFECTION_NOTICE", szAttackerName, szVictimName)
+	}
+
+	// Remove human Leader Glow when infected.
+	if (g_bLeaderGlow && (g_iEscapeRank[RANK_FIRST] == iVictim))
+	{
+		// Unset player glow rendering.
+		Set_Rendering(iVictim)
+	}
+
+	// Adding Infection icon on Victim Screen
+	InfectionIcon(iVictim)
 }
 
-public Show_Message()
+// Forward called when zombies appear.
+public ze_zombie_appear()
 {
-	static Float:fVelocity[3], bool:bLeaderGlow, bool:bGlowRandomColors, iGlowColors[3], id, i
+	// Reset Array.
+	arrayset(g_flEscapePoints, 0.0, charsmax(g_flEscapePoints))
 
-	// Get glow color.
-	bLeaderGlow = get_pcvar_num(g_pCvarLeaderGlow) ? true : false
-	bGlowRandomColors = get_pcvar_num(g_pCvarLeaderGlowRandom) ? true : false
-	iGlowColors[Red] = get_pcvar_num(g_pCvarLeaderGlowColors[Red])
-	iGlowColors[Green] = get_pcvar_num(g_pCvarLeaderGlowColors[Green])
-	iGlowColors[Blue] = get_pcvar_num(g_pCvarLeaderGlowColors[Blue])
+	// New task for Show message for player (0.5s for reduce CPU usage).
+	set_task(0.5, "Show_Message", TASK_MESSAGE, "", 0, "b")
+}
 
-	for (id = 1; id <= g_iMaxClients; id++)
+public Show_Message(iTask)
+{
+	// Static's
+	static iPlayers[MAX_PLAYERS], iAliveCount, iNum, id
+
+	// Get index of all alive players.
+	get_players(iPlayers, iAliveCount, "a")
+
+	for (iNum = 0; iNum <= iAliveCount; iNum++)
 	{
-		if (!is_user_alive(id))
-			continue
-	
-		// Add Point for Who is Running Fast
-		if(!ze_is_user_zombie(id))
-		{			
-			get_entvar(id, var_velocity, fVelocity)
+		// Get player id.
+		id = iPlayers[iNum]
+
+		// Static.
+		static Float:vVelocity[3]
+
+		// Get velocity of player.
+		get_entvar(id, var_velocity, vVelocity)
 			
-			switch(floatround(vector_length(fVelocity)))
-			{
-				// Starting From Lowest Weapon speed, Finishing at Highest speed (Player maybe have more than 500)
-				case 210..229: g_iEscapePoints[id] += 1
-				case 230..249: g_iEscapePoints[id] += 2
-				case 250..300: g_iEscapePoints[id] += 3
-				case 301..350: g_iEscapePoints[id] += 4
-				case 351..400: g_iEscapePoints[id] += 5
-				case 401..450: g_iEscapePoints[id] += 6
-				case 451..500: g_iEscapePoints[id] += 7
-			}
-		}
-	
-		if (bLeaderGlow)
+		/* Convert Velocity to Points (Reduce use high value in Variable, Because Variable has limits).
+		And I see this best way to get points from Velocity of player */
+		g_flEscapePoints[id] += vector_length(vVelocity) / g_flMaxVelocity
+			
+		// Show HUDs for player.
+		if (!g_bHideHUD[id])
+			Show_Speed_Message(id)		
+	}
+
+	// Leader glow enabled?
+	if (g_bLeaderGlow)
+	{
+		// Set glow for Leader.
+		for (iNum = 0; iNum <= iAliveCount; iNum++)
 		{
-			// Set Glow For Escape Leader
-			for (i = 1; i <= g_iMaxClients; i++)
+			// Get player id.
+			id = iPlayers[iNum]
+
+			// Glow rendering disabled?
+			if (g_bStopRendering[id])
+				continue
+
+			// Player ins't Human or Rendering stopped?
+			if (ze_is_user_zombie_ex(id))
+				continue
+
+			// Player in Rank First?
+			if (g_iEscapeRank[RANK_FIRST] == id) // The Leader id
 			{
-				if (!is_user_alive(i) || ze_is_user_zombie(i) || g_bStopRendering[i])
-					continue
-			
-				if (g_iEscapeRank[RANK_FIRST] == i) // The Leader id
+				// Random glow colors disabled?
+				if (!g_bLeaderGlowRandom)
 				{
-					if (!bGlowRandomColors)
+					// Player has glow rendering?
+					if (!g_bGlowRendering[id])
 					{
-						Set_Rendering(i, kRenderFxGlowShell, iGlowColors[Red], iGlowColors[Green], iGlowColors[Blue], kRenderNormal, 40)
+						// Set player glow rendering
+						g_bGlowRendering[id] = true
+						Set_Rendering(id, kRenderFxGlowShell, g_iRankColors[Red], g_iRankColors[Green], g_iRankColors[Blue], kRenderNormal, 20)						
 					}
-					else
-					{
-						Set_Rendering(i, kRenderFxGlowShell, random(256), random(256), random(256), kRenderNormal, 40)
-					}
-					
 				}
-				else
+				else // Random glow enabled.
 				{
-					Set_Rendering(i)
-				}
+					// Player has glow rendering?
+					if (!g_bGlowRendering[id])
+					{
+						// Set player glow rendering
+						g_bGlowRendering[id] = true
+						Set_Rendering(id, kRenderFxGlowShell, random(256), random(256), random(256), kRenderNormal, 20)						
+					}
+				}		
+			}
+			else
+			{
+				// Player has glow rendering?
+				if (g_bGlowRendering[id])
+				{
+					// Remove player colored glow.
+					Set_Rendering(id)
+					g_bGlowRendering[id] = false
+				}			
 			}
 		}
-		
-		Show_Speed_Message(id)
 	}
 }
 
 public Show_Speed_Message(id)
 {
-	// Case 0 has nothing to do in case g_pCvarMode = 0
-	switch (get_pcvar_num(g_pCvarMode))
+	// Rank mode.
+	switch (g_iRankMode)
 	{
 		case 1: // Leader Mode
 		{
-			static szLeader[32], iLeaderID
+			// Static's
+			static szLeader[MAX_NAME_LENGTH], iLeaderID
 
+			// Find highest points.
 			Speed_Stats()
+
+			// Get player id in Rank First.
 			iLeaderID = g_iEscapeRank[RANK_FIRST]
 			
-			if (is_user_alive(iLeaderID) && !ze_is_user_zombie(iLeaderID) && g_iEscapePoints[iLeaderID] != 0)
+			if (is_user_alive(iLeaderID) && !ze_is_user_zombie_ex(iLeaderID) && g_flEscapePoints[iLeaderID] != 0.0)
 			{
+				// Get name of player.
 				get_user_name(iLeaderID, szLeader, charsmax(szLeader))
 				
-				set_hudmessage(get_pcvar_num(g_pCvarRankColors[Red]), get_pcvar_num(g_pCvarRankColors[Green]), get_pcvar_num(g_pCvarRankColors[Blue]), 0.015,  0.18, 0, 0.2, 0.4, 0.09, 0.09)
+				// Show HUD for all players.
+				set_hudmessage(g_iLeaderGlowColors[Red], g_iLeaderGlowColors[Green], g_iLeaderGlowColors[Blue], 0.015,  0.18, 0, 0.2, 0.4, 0.09, 0.09)
 				ShowSyncHudMsg(id, g_iSpeedRank, "%L", LANG_PLAYER, "RANK_INFO_LEADER", szLeader)
 			}
 			else
 			{
+				// Show HUD for all players.
 				formatex(szLeader, charsmax(szLeader), "%L", LANG_PLAYER, "RANK_INFO_NONE")
-				set_hudmessage(get_pcvar_num(g_pCvarRankColors[Red]), get_pcvar_num(g_pCvarRankColors[Green]), get_pcvar_num(g_pCvarRankColors[Blue]), 0.015,  0.18, 0, 0.2, 0.4, 0.09, 0.09)
+				set_hudmessage(g_iLeaderGlowColors[Red], g_iLeaderGlowColors[Green], g_iLeaderGlowColors[Blue], 0.015,  0.18, 0, 0.2, 0.4, 0.09, 0.09)
 				ShowSyncHudMsg(id, g_iSpeedRank, "%L", LANG_PLAYER, "RANK_INFO_LEADER", szLeader)
 			}
 		}
 		case 2: // Rank Mode
 		{
+			// Static's
+			static szFirst[MAX_NAME_LENGTH], szSecond[MAX_NAME_LENGTH], szThird[MAX_NAME_LENGTH], iFirstID, iSecondID, iThirdID
+			
+			// Find highest points.
 			Speed_Stats()
+			 
+			// Players index.
+			iFirstID 	= g_iEscapeRank[RANK_FIRST]
+			iSecondID	= g_iEscapeRank[RANK_SECOND]
+			iThirdID 	= g_iEscapeRank[RANK_THIRD]
 			
-			static szFirst[32], szSecond[32], szThird[32], iFirstID, iSecondID, iThirdID
-			
-			iFirstID = g_iEscapeRank[RANK_FIRST]
-			iSecondID = g_iEscapeRank[RANK_SECOND]
-			iThirdID = g_iEscapeRank[RANK_THIRD]
-			
-			if (is_user_alive(iFirstID) && !ze_is_user_zombie(iFirstID) && g_iEscapePoints[iFirstID] != 0)
-			{
-				get_user_name(iFirstID, szFirst, charsmax(szFirst))
-			}
+			// Player is alive and is Human?
+			if (is_user_alive(iFirstID) && !ze_is_user_zombie_ex(iFirstID) && g_flEscapePoints[iFirstID] != 0.0)
+				get_user_name(iFirstID, szFirst, charsmax(szFirst)) // Get name of first player.
 			else
-			{
 				formatex(szFirst, charsmax(szFirst), "%L", LANG_PLAYER, "RANK_INFO_NONE")
-			}
 			
-			if (is_user_alive(iSecondID) && !ze_is_user_zombie(iSecondID) && g_iEscapePoints[iSecondID] != 0)
-			{
-				get_user_name(iSecondID, szSecond, charsmax(szSecond))
-			}
+			// Player is alive and is Human?
+			if (is_user_alive(iSecondID) && !ze_is_user_zombie_ex(iSecondID) && g_flEscapePoints[iSecondID] != 0.0)				
+				get_user_name(iSecondID, szSecond, charsmax(szSecond)) // Get name of second player.
 			else
-			{
 				formatex(szSecond, charsmax(szSecond), "%L", LANG_PLAYER, "RANK_INFO_NONE")
-			}
 			
-			if (is_user_alive(iThirdID) && !ze_is_user_zombie(iThirdID) && g_iEscapePoints[iThirdID] != 0)
-			{
-				get_user_name(iThirdID, szThird, charsmax(szThird))		
-			}
+			// Player is alive and is Human?
+			if (is_user_alive(iThirdID) && !ze_is_user_zombie_ex(iThirdID) && g_flEscapePoints[iThirdID] != 0.0)		
+				get_user_name(iThirdID, szThird, charsmax(szThird)) // Get name of third player.
 			else
-			{
 				formatex(szThird, charsmax(szThird), "%L", LANG_PLAYER, "RANK_INFO_NONE")
-			}
 			
-			set_hudmessage(get_pcvar_num(g_pCvarRankColors[Red]), get_pcvar_num(g_pCvarRankColors[Green]), get_pcvar_num(g_pCvarRankColors[Blue]), 0.015,  0.18, 0, 0.2, 0.4, 0.09, 0.09)
+			// Show HUD for player.
+			set_hudmessage(g_iRankColors[Red], g_iRankColors[Green], g_iRankColors[Blue], 0.015,  0.18, 0, 0.2, 0.4, 0.09, 0.09)
 			ShowSyncHudMsg(id, g_iSpeedRank, "%L", LANG_PLAYER, "RANK_INFO", szFirst, szSecond, szThird)
 		}
 	}
 }
 
-public Speed_Stats()
+/**
+ * Private Function:
+ */
+Speed_Stats()
 {
-	static iHighest, iCurrentID, id
+	// Static's
+	static iPlayers[MAX_PLAYERS], iAliveCount, Float:flHighest, iCurID, id
+
+	// Get index of alive players.
+	get_players(iPlayers, iAliveCount, "a")
+
+	// Reset static.
+	iCurID = 0
+	flHighest = 0.0
 	
-	// Rank First
-	iHighest = 0; iCurrentID = 0
-	
-	for(id = 1; id <= g_iMaxClients; id++)
+	// First Rank.
+	for (id = 0; id <= iAliveCount; id++)
 	{
-		if(!is_user_alive(id) || ze_is_user_zombie(id))
+		// Player ins't Human?
+		if(ze_is_user_zombie_ex(id))
 			continue
 			
-		if(g_iEscapePoints[id] > iHighest)
+		// Find player has highest point?
+		if(g_flEscapePoints[id] > flHighest)
 		{
-			iCurrentID = id
-			iHighest = g_iEscapePoints[id]
+			// Store the player id in Buffer.
+			iCurID = id
+
+			// Store the player escapes point in Buffer
+			flHighest = g_flEscapePoints[id]
 		}
 	}
 	
-	g_iEscapeRank[RANK_FIRST] = iCurrentID
+	// Store the player index in Rank First.
+	g_iEscapeRank[RANK_FIRST] = iCurID
 	
-	// Rank Second
-	iHighest = 0; iCurrentID = 0
-	
-	for(id = 1; id <= g_iMaxClients; id++)
+	if (g_iRankMode == 2)
 	{
-		if(!is_user_alive(id) || ze_is_user_zombie(id))
-			continue
+		// Reset static.
+		iCurID = 0
+		flHighest = 0.0
 		
-		if (g_iEscapeRank[RANK_FIRST] == id)
-			continue
-			
-		if(g_iEscapePoints[id] > iHighest)
+		// Second Rank.
+		for (id = 0; id <= iAliveCount; id++)
 		{
-			iCurrentID = id
-			iHighest = g_iEscapePoints[id]
+			// Player ins't Human?
+			if(ze_is_user_zombie_ex(id))
+				continue
+			
+			// Ignore player in Rank First!
+			if (g_iEscapeRank[RANK_FIRST] == id)
+				continue
+				
+			// Find second player has highest point?
+			if(g_flEscapePoints[id] > flHighest)
+			{
+				// Store the player id in Buffer.
+				iCurID = id
+
+				// Store the player escapes point in Buffer
+				flHighest = g_flEscapePoints[id]
+			}
 		}
-	}
-	
-	g_iEscapeRank[RANK_SECOND] = iCurrentID		
-	
-	// Rank Third
-	iHighest = 0; iCurrentID = 0
-	
-	for(id = 1; id <= g_iMaxClients; id++)
-	{
-		if(!is_user_alive(id) || ze_is_user_zombie(id))
-			continue
 		
-		if(g_iEscapeRank[RANK_FIRST] == id || g_iEscapeRank[RANK_SECOND] == id)
-			continue
-			
-		if(g_iEscapePoints[id] > iHighest)
+		// Store the player index in Second Rank.
+		g_iEscapeRank[RANK_SECOND] = iCurID		
+		
+		// Reset static.
+		iCurID = 0
+		flHighest = 0.0
+		
+		// Third Rank.
+		for (id = 0; id <= iAliveCount; id++)
 		{
-			iCurrentID = id
-			iHighest = g_iEscapePoints[id]
+			// Player ins't Human?
+			if(ze_is_user_zombie_ex(id))
+				continue
+			
+			// Ignore player in Rank First or Rank Second?
+			if(g_iEscapeRank[RANK_FIRST] == id || g_iEscapeRank[RANK_SECOND] == id)
+				continue
+				
+			// Find third player has highest point? 
+			if(g_flEscapePoints[id] > flHighest)
+			{
+				// Store the player id in Buffer.
+				iCurID = id
+
+				// Store the player escapes point in Buffer.
+				flHighest = g_flEscapePoints[id]
+			}
 		}
-	}
-	
-	g_iEscapeRank[RANK_THIRD] = iCurrentID	
+		
+		// Store the player index in Third Rank.
+		g_iEscapeRank[RANK_THIRD] = iCurID		
+	}	
 }
 
+/**
+ * Functions of natives:
+ */
 public native_ze_get_escape_leader_id()
 {
 	return g_iEscapeRank[RANK_FIRST]
@@ -306,6 +387,7 @@ public native_ze_get_escape_leader_id()
 
 public native_ze_stop_mod_rendering(id, bool:bSet)
 {
+	// Player not found?
 	if (is_user_connected(id))
 	{
 		g_bStopRendering[id] = bSet
@@ -313,4 +395,34 @@ public native_ze_stop_mod_rendering(id, bool:bSet)
     }
 	
 	return false
+}
+
+public native_show_user_rankhud(const id)
+{
+	// Player not found?
+	if (!is_user_connected(id))
+		return false
+
+	// HUD is already appear?
+	if (g_bHideHUD[id])
+		return true
+	
+	// Show player HUD.
+	g_bHideHUD[id] = true
+	return true
+}
+
+public native_hide_user_rankhud(const id)
+{
+	// Player not found?
+	if (!is_user_connected(id))
+		return false
+	
+	// HUD is already hidden?
+	if (!g_bHideHUD[id])
+		return true
+
+	// Hide player HUD.
+	g_bHideHUD[id] = false
+	return true
 }
