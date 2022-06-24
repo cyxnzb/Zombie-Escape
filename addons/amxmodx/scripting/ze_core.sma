@@ -201,6 +201,11 @@ public plugin_cfg()
 	// Create our Trie to store SteamIDs in.
 	g_tChosenPlayers = TrieCreate()
 
+	// Delay before update value on game CVar's.
+	set_task(1.0, "delayUpdateCVar")
+}
+
+public delayUpdateCVar() {
 	// Replace CVars values.
 	set_cvar_num("mp_roundtime", g_iRoundTime)
 	set_cvar_num("mp_freezetime", g_iFreezeTime)
