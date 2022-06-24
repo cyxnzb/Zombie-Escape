@@ -98,11 +98,11 @@ stock RequiredZombies()
  * @noreturn
  *
  */
-stock Set_MapLightStyle(id, const szMapLightStyle[])
+stock set_lightstyle(id, const szMapLightStyle[])
 {
 	message_begin(MSG_ONE, SVC_LIGHTSTYLE, .player = id)
-	write_byte(0)
-	write_string(szMapLightStyle)
+	write_byte(0) // Light appearance.
+	write_string(szMapLightStyle) // Light style.
 	message_end()
 }
 
@@ -121,7 +121,7 @@ stock Set_MapLightStyle(id, const szMapLightStyle[])
  * @noreturn
  *
  */
-stock Set_NightVision(id, iDuration = 0, iHoldTime = 0, iFlags = 0x0000, iRed = 0, iGreen = 0, iBlue = 0, iAlpha = 0)
+stock set_fadescreen(id, iDuration = 0, iHoldTime = 0, iFlags = 0x0000, iRed = 0, iGreen = 0, iBlue = 0, iAlpha = 0)
 {
 	message_begin(MSG_ONE, msg_ScreenFade, .player = id)
 	write_short(iDuration)
@@ -132,44 +132,6 @@ stock Set_NightVision(id, iDuration = 0, iHoldTime = 0, iFlags = 0x0000, iRed = 
 	write_byte(iBlue)
 	write_byte(iAlpha)
 	message_end()
-}
-
-/**
- * Set a Zombie knockback.
- *
- * @param ent 			Client index.
- * @param VicOrigin[3] 	Origin of player.
- * @param speed 		Speed.
- * @param type 			Knockback type.
- *
- * @noreturn
- *
- */
-stock Set_Knockback(ent, Float:VicOrigin[3], Float:speed, type)
-{
-	static Float:fl_Velocity[3], Float:EntOrigin[3], Float:distance_f, Float:fl_Time
-	
-	get_entvar(ent, var_origin, EntOrigin)
-	distance_f = get_distance_f(EntOrigin, VicOrigin)
-	fl_Time = distance_f / speed
-	
-	switch (type)
-	{
-		case 1:
-		{
-			fl_Velocity[0] = ((VicOrigin[0] - EntOrigin[0]) / fl_Time) * 1.5
-			fl_Velocity[1] = ((VicOrigin[1] - EntOrigin[1]) / fl_Time) * 1.5
-			fl_Velocity[2] = (VicOrigin[2] - EntOrigin[2]) / fl_Time		
-		}
-		case 2:
-		{
-			fl_Velocity[0] = ((EntOrigin[0] - VicOrigin[0]) / fl_Time) * 1.5
-			fl_Velocity[1] = ((EntOrigin[1] - VicOrigin[1]) / fl_Time) * 1.5
-			fl_Velocity[2] = (EntOrigin[2] - VicOrigin[2]) / fl_Time
-		}
-	}
-	
-	set_entvar(ent, var_velocity, fl_Velocity)
 }
 
 /**
@@ -429,16 +391,6 @@ stock Set_Rendering(ent, fx = kRenderFxNone, r = 255, g = 255, b = 255, render =
 	set_entvar(ent, var_rendercolor, color)
 	set_entvar(ent, var_rendermode, render)
 	set_entvar(ent, var_renderamt, float(amount))
-}
-
-/**
- * Multiply Vector by Scalar
- */
-stock VecMulScalar(const Float:vec[], Float:scalar, Float:out[])
-{
-	out[0] = vec[0] * scalar
-	out[1] = vec[1] * scalar
-	out[2] = vec[2] * scalar
 }
 
 /**
