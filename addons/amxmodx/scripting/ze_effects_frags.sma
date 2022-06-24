@@ -1,66 +1,114 @@
 #include <zombie_escape>
 
-// Variables
-new g_iMaxClients
+// Global Variables
+new g_iFragsInfection,
+	g_iDeathInfection,
+	g_iFragsEscapeSuccess,
+	g_iDamage2Score,
+	Float:g_flRequiredDamage,
+	Float:g_flTotalDamage[MAX_PLAYERS+1]
 
-// Cvars
-new g_pCvarHumanInfectedFrags, 
-	g_pCvarEscapeSuccessFrags, 
-	g_pCvarInfectionDeaths
+// Hook Chains.
+new HookChain:g_pTakeDamagePost
 
+// Forward called after server activation.
 public plugin_init()
 {
-	register_plugin("[ZE] Frags Awards/Death Effects", ZE_VERSION, AUTHORS)
+	// Load plugin.
+	register_plugin("[ZE] Frags Awards/Death Effects", ZE_VERSION, AUTHORS, ZE_HOMEURL, "It's give infector's or humans an frags on scoreboard.")
 	
-	// Cvars
-	g_pCvarHumanInfectedFrags = register_cvar("ze_human_infected_frags", "1")
-	g_pCvarInfectionDeaths = register_cvar("ze_infection_deaths", "1")
-	g_pCvarEscapeSuccessFrags = register_cvar("ze_escape_success_frags", "3")
-	
-	// Static Values
-	g_iMaxClients = get_member_game(m_nMaxPlayers)
+	// Hook Chains.
+	g_pTakeDamagePost = RegisterHookChain(RG_CBasePlayer_TakeDamage, "fw_TakeDamage_Post", 1)
+
+	// CVars.
+	new pCvar_iDamage2Score = register_cvar("ze_damage_to_frags", "0")
+
+	// Create new CVars and Store automatically new value in Global Variables.
+	bind_pcvar_num(register_cvar("ze_human_infected_frags", "1"), g_iFragsInfection)
+	bind_pcvar_num(register_cvar("ze_infection_deaths", "1"), g_iDeathInfection)
+	bind_pcvar_num(register_cvar("ze_escape_success_frags", "3"), g_iFragsEscapeSuccess)
+	bind_pcvar_num(pCvar_iDamage2Score, g_iDamage2Score)
+	bind_pcvar_float(register_cvar("ze_required_damage", "200"), g_flRequiredDamage)
+
+	// Hook CVars.
+	hook_cvar_change(pCvar_iDamage2Score, "fw_CvarDamageToScore_Post")
+
+	// Delay before enable or disable TakeDamage hook.
+	set_task(1.0, "delayEnableHook")
 }
 
+public delayEnableHook() {
+	// Enable|Disable TakeDamage hook.
+	if (g_iDamage2Score != 0)
+		EnableHookChain(g_pTakeDamagePost) // Enable TakeDamage hook.
+	else
+		DisableHookChain(g_pTakeDamagePost) // Disable TakeDamage hook.	
+}
+
+// Hook called when changed value in CVar ze_damage_to_frags.
+public fw_CvarDamageToScore_Post(pCvar, const szOldVal[], const szNewVal[])
+{
+	// Enable TakeDamage hook.
+	if (strlen(szNewVal) != 0)
+		EnableHookChain(g_pTakeDamagePost)
+	else // Disable TakeDamage hook.
+		DisableHookChain(g_pTakeDamagePost)
+}
+
+// Forward called after player infected.
 public ze_user_infected(iVictim, iInfector)
 {
-	if (iInfector == 0) // Block Awards for Zombies Chosen by the Server
-		return
+	// Player infected by Server?
+	if (iInfector == 0)
+		return // Prevent give award for server.
 	
 	// Award Zombie Who infected, And Increase Deaths of the infected human
-	UpdateFrags(iInfector, iVictim, get_pcvar_num(g_pCvarHumanInfectedFrags), get_pcvar_num(g_pCvarInfectionDeaths), 1)
-	
-	// Adding Infection icon on Victim Screen
-	InfectionIcon(iVictim)
-	
-	// Fix Dead Attribute (Delay needed)
-	set_task(0.1, "Fix_DeadAttrib", _, _, _, "a", 6)
+	UpdateFrags(iInfector, iVictim, g_iFragsInfection, g_iDeathInfection, 1)
 }
 
-public ze_roundend(WinTeam)
+// Hook called when player take damage.
+public fw_TakeDamage_Post(iVictim, iInflector, iAttacker, Float:flDamage, iDamageType)
 {
-	if (WinTeam == ZE_TEAM_HUMAN)
+	// Invalid player?
+	if (!is_user_connected(iVictim) || !is_user_connected(iAttacker))
+		return
+	
+	// Attacker ins't Human or Victim isn't Zombie?
+	if (!ze_is_user_zombie(iVictim) || ze_is_user_zombie_ex(iAttacker))
+		return
+
+	// +Damage.
+	g_flTotalDamage[iAttacker] += flDamage
+
+	// Player has reached required damage?
+	if (g_flTotalDamage[iAttacker] >= g_flRequiredDamage)
 	{
-		for (new id = 1; id <= g_iMaxClients; id++)
-		{
-			// Skip All Dead Players or Zombies
-			if (!is_user_alive(id) || ze_is_user_zombie(id))
-				continue
-			
-			// + Frags for All humans Who are Alive
-			UpdateFrags(id, 0, get_pcvar_num(g_pCvarEscapeSuccessFrags), 0, 1)
-		}
+		// Reset Var.
+		g_flTotalDamage[iAttacker] -= g_flRequiredDamage
+
+		// Give player Frags.
+		UpdateFrags(iAttacker, 0, g_iDamage2Score, 0, 1)
 	}
 }
 
-public Fix_DeadAttrib()
+// Forward called when round over.
+public ze_roundend(WinTeam)
 {
-	for (new id = 1; id <= g_iMaxClients; id++)
+	// Humans are winners?
+	if (WinTeam == ZE_TEAM_HUMAN)
 	{
-		// Skip All Dead And Humans
-		if (!is_user_alive(id) || !ze_is_user_zombie(id))
-			continue
-		
-		// Fix the Dead Attribute
-		FixDeadAttrib(id)
+		// Get id of all players.
+		new iPlayers[MAX_PLAYERS], iAliveCount
+		get_players(iPlayers, iAliveCount, "a")
+
+		for (new id = 0; id <= iAliveCount; id++)
+		{
+			// Player isn't Human?
+			if (ze_is_user_zombie_ex(id))
+				continue
+			
+			// +Frags for all Humans.
+			UpdateFrags(id, 0, g_iFragsEscapeSuccess, 0, 1)
+		}
 	}
 }
