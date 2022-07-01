@@ -31,7 +31,7 @@ new g_iSpeedRank,
 	bool:g_bInfectNotice,
 	bool:g_bLeaderGlow,
 	bool:g_bLeaderGlowRandom,
-	bool:g_bHideHUD[MAX_PLAYERS+1],
+	bool:g_bHideRankHud[MAX_PLAYERS+1],
 	bool:g_bGlowRendering[MAX_PLAYERS+1],
 	bool:g_bStopRendering[MAX_PLAYERS+1],
 	Float:g_flMaxVelocity,
@@ -81,15 +81,25 @@ public ze_game_started_pre()
 	remove_task(TASK_MESSAGE)
 }
 
+// Forward called after player humanized.
+public ze_user_humanized(id)
+{
+	// Reset player Escape Points.
+	g_flEscapePoints[id] = 0.0
+	
+	// Remove human Leader Glow when humanized.
+	if (g_bLeaderGlow && (g_iEscapeRank[RANK_FIRST] == id) && g_bGlowRendering[id])
+	{
+		// Unset player glow rendering.
+		Set_Rendering(id)
+	}
+}
+
 // Forward called after player infected.
 public ze_user_infected(iVictim, iInfector)
-{
-	// Player infected by Server?
-	if (iInfector == 0)
-		return
-		
+{		
 	// Infection notice enabled?
-	if (g_bInfectNotice)
+	if (g_bInfectNotice && (iInfector != 0))
 	{
 		// Local Variables.
 		new szVictimName[MAX_NAME_LENGTH], szAttackerName[MAX_NAME_LENGTH]
@@ -104,7 +114,7 @@ public ze_user_infected(iVictim, iInfector)
 	}
 
 	// Remove human Leader Glow when infected.
-	if (g_bLeaderGlow && (g_iEscapeRank[RANK_FIRST] == iVictim))
+	if (g_bLeaderGlow && (g_iEscapeRank[RANK_FIRST] == iVictim) && g_bGlowRendering[iVictim])
 	{
 		// Unset player glow rendering.
 		Set_Rendering(iVictim)
@@ -118,7 +128,7 @@ public ze_user_infected(iVictim, iInfector)
 public ze_zombie_appear()
 {
 	// Reset Array.
-	arrayset(g_flEscapePoints, 0.0, charsmax(g_flEscapePoints))
+	arrayset(g_flEscapePoints, 0.0, sizeof g_flEscapePoints)
 
 	// New task for Show message for player (0.5s for reduce CPU usage).
 	set_task(0.5, "Show_Message", TASK_MESSAGE, "", 0, "b")
@@ -127,18 +137,15 @@ public ze_zombie_appear()
 public Show_Message(iTask)
 {
 	// Static's
-	static iPlayers[MAX_PLAYERS], iAliveCount, iNum, id
+	static Float:vVelocity[3], iPlayers[MAX_PLAYERS], iAliveCount, iNum, id
 
 	// Get index of all alive players.
 	get_players(iPlayers, iAliveCount, "a")
 
-	for (iNum = 0; iNum <= iAliveCount; iNum++)
+	for (iNum = 0; iNum < iAliveCount; iNum++)
 	{
 		// Get player id.
 		id = iPlayers[iNum]
-
-		// Static.
-		static Float:vVelocity[3]
 
 		// Get velocity of player.
 		get_entvar(id, var_velocity, vVelocity)
@@ -148,15 +155,17 @@ public Show_Message(iTask)
 		g_flEscapePoints[id] += vector_length(vVelocity) / g_flMaxVelocity
 			
 		// Show HUDs for player.
-		if (!g_bHideHUD[id])
-			Show_Speed_Message(id)		
+		if (!g_bHideRankHud[id])
+		{
+			Show_Speed_Message(id)
+		}
 	}
 
 	// Leader glow enabled?
 	if (g_bLeaderGlow)
 	{
 		// Set glow for Leader.
-		for (iNum = 0; iNum <= iAliveCount; iNum++)
+		for (iNum = 0; iNum < iAliveCount; iNum++)
 		{
 			// Get player id.
 			id = iPlayers[iNum]
@@ -295,7 +304,7 @@ Speed_Stats()
 	flHighest = 0.0
 	
 	// First Rank.
-	for (id = 0; id <= iAliveCount; id++)
+	for (id = 0; id < iAliveCount; id++)
 	{
 		// Player ins't Human?
 		if(ze_is_user_zombie_ex(id))
@@ -322,7 +331,7 @@ Speed_Stats()
 		flHighest = 0.0
 		
 		// Second Rank.
-		for (id = 0; id <= iAliveCount; id++)
+		for (id = 0; id < iAliveCount; id++)
 		{
 			// Player ins't Human?
 			if(ze_is_user_zombie_ex(id))
@@ -351,7 +360,7 @@ Speed_Stats()
 		flHighest = 0.0
 		
 		// Third Rank.
-		for (id = 0; id <= iAliveCount; id++)
+		for (id = 0; id < iAliveCount; id++)
 		{
 			// Player ins't Human?
 			if(ze_is_user_zombie_ex(id))
@@ -397,32 +406,32 @@ public native_ze_stop_mod_rendering(id, bool:bSet)
 	return false
 }
 
-public native_show_user_rankhud(const id)
+public native_show_user_rankhud(id)
 {
 	// Player not found?
 	if (!is_user_connected(id))
 		return false
 
 	// HUD is already appear?
-	if (g_bHideHUD[id])
+	if (!g_bHideRankHud[id])
 		return true
 	
 	// Show player HUD.
-	g_bHideHUD[id] = true
+	g_bHideRankHud[id] = false
 	return true
 }
 
-public native_hide_user_rankhud(const id)
+public native_hide_user_rankhud(id)
 {
 	// Player not found?
 	if (!is_user_connected(id))
 		return false
 	
 	// HUD is already hidden?
-	if (!g_bHideHUD[id])
+	if (g_bHideRankHud[id])
 		return true
 
 	// Hide player HUD.
-	g_bHideHUD[id] = false
+	g_bHideRankHud[id] = true
 	return true
 }
