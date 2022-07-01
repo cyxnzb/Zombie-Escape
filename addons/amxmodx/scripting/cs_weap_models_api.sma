@@ -1,350 +1,294 @@
-/*================================================================================
-	
-	----------------------------------
-	-*- [CS] Weapon Models API 1.2 -*-
-	----------------------------------
-	
-	- Allows easily replacing player's view models and weapon models in CS and CZ
-	
-================================================================================*/
+#include <zombie_escape>
 
-#include <amxmodx>
-#include <fakemeta>
-#include <hamsandwich>
-#include <reapi>
+// Global Variables.
+new g_iCustomViewModelsCount
+new g_iCustomWeaponModelsCount
+new g_iCustomViewModelsPosition[MAX_PLAYERS+1][MAX_WEAPONS]
+new g_iCustomWeaponModelsPosition[MAX_PLAYERS+1][MAX_WEAPONS]
 
-#define MAXPLAYERS 32
-#define CSW_FIRST_WEAPON CSW_P228
-#define CSW_LAST_WEAPON CSW_P90
-#define POSITION_NULL -1
+// Dynamic Array's.
+new Array:g_aCustomViewModelsPath
+new Array:g_aCustomWeaponModelsPath
 
-// CS Weapon CBase Offsets (win32)
-const PDATA_SAFE = 2
-const OFFSET_WEAPONOWNER = 41
-const OFFSET_WEAPONTYPE = 43
-const OFFSET_LINUX_WEAPONS = 4 // weapon offsets are only 4 steps higher on Linux
+// Forward allows register new natives.
+public plugin_natives() {
+	register_library("cs_weap_models_api")
 
-// Weapon entity names
-new const WEAPONENTNAMES[][] = { "", "weapon_p228", "", "weapon_scout", "weapon_hegrenade", "weapon_xm1014", "weapon_c4", "weapon_mac10",
-			"weapon_aug", "weapon_smokegrenade", "weapon_elite", "weapon_fiveseven", "weapon_ump45", "weapon_sg550",
-			"weapon_galil", "weapon_famas", "weapon_usp", "weapon_glock18", "weapon_awp", "weapon_mp5navy", "weapon_m249",
-			"weapon_m3", "weapon_m4a1", "weapon_tmp", "weapon_g3sg1", "weapon_flashbang", "weapon_deagle", "weapon_sg552",
-			"weapon_ak47", "weapon_knife", "weapon_p90" }
+	register_native("cs_set_player_view_model", "native_set_user_view_model")
+	register_native("cs_reset_player_view_model", "native_reset_user_view_model")
 
-new g_MaxPlayers
-new g_CustomViewModelsPosition[MAXPLAYERS+1][CSW_LAST_WEAPON+1]
-new Array:g_CustomViewModelsNames
-new g_CustomViewModelsCount
-new g_CustomWeaponModelsPosition[MAXPLAYERS+1][CSW_LAST_WEAPON+1]
-new Array:g_CustomWeaponModelsNames
-new g_CustomWeaponModelsCount
+	register_native("cs_set_player_weap_model", "native_set_user_weap_model")
+	register_native("cs_reset_player_weap_model", "native_reset_user_weap_model")
 
-public plugin_init()
-{
-	register_plugin("[CS] Weapon Models API", "1.2", "WiLS/ZE Dev Team")
+	register_native("ze_set_user_view_model", "native_set_user_view_model")
+	register_native("ze_reset_user_view_model", "native_reset_user_view_model")
+
+	register_native("ze_set_user_weapn_model", "native_set_user_weap_model")
+	register_native("ze_reset_user_weapn_model", "native_reset_user_weap_model")
+}
+
+// Forward called after server activation.
+public plugin_init() {
+	// Load plugin.
+	register_plugin("[ZE] Weapon Models APIs", ZE_VERSION, AUTHORS, ZE_HOMEURL)
 	
-	for (new i = 1; i < sizeof WEAPONENTNAMES; i++)
-		if (WEAPONENTNAMES[i][0]) RegisterHam(Ham_Item_Deploy, WEAPONENTNAMES[i], "fw_Item_Deploy_Post", 1)
-	
-	g_MaxPlayers = get_member_game(m_nMaxPlayers)
-	
-	// Initialize dynamic arrays
-	g_CustomViewModelsNames = ArrayCreate(128, 1)
-	g_CustomWeaponModelsNames = ArrayCreate(128, 1)
+	// Hook Chain.
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy, "fw_DefaultDeploy_Post", 1)
+
+	// Create new dynamic array's.
+	g_aCustomViewModelsPath = ArrayCreate(MAX_MODEL_LENGTH, 1)
+	g_aCustomWeaponModelsPath = ArrayCreate(MAX_MODEL_LENGTH, 1)
 	
 	// Initialize array positions
-	new id, weaponid
-	for (id = 1; id <= g_MaxPlayers; id++)
-	{
-		for (weaponid = CSW_FIRST_WEAPON; weaponid <= CSW_LAST_WEAPON; weaponid++)
-		{
-			g_CustomViewModelsPosition[id][weaponid] = POSITION_NULL
-			g_CustomWeaponModelsPosition[id][weaponid] = POSITION_NULL
+	new id, iWpnID
+	for (id = 1; id <= MaxClients; id++) {
+		for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++) {
+			g_iCustomViewModelsPosition[id][iWpnID] = NULLENT
+			g_iCustomWeaponModelsPosition[id][iWpnID] = NULLENT
 		}
 	}
 }
 
-public plugin_natives()
-{
-	register_library("cs_weap_models_api")
-	register_native("cs_set_player_view_model", "native_set_player_view_model")
-	register_native("cs_reset_player_view_model", "native_reset_player_view_model")
-	register_native("cs_set_player_weap_model", "native_set_player_weap_model")
-	register_native("cs_reset_player_weap_model", "native_reset_player_weap_model")
+// Forward called after player disconnected from server.
+public client_disconnected(id) {
+	// Remove custom models for player after disconnecting
+	new iWpnID
+	for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++) {
+		if (g_iCustomViewModelsPosition[id][iWpnID] != NULLENT)
+			RemoveCustomViewModel(id, iWpnID)
+		if (g_iCustomWeaponModelsPosition[id][iWpnID] != NULLENT)
+			RemoveCustomWeaponModel(id, iWpnID)
+	}
 }
 
-public native_set_player_view_model(plugin_id, num_params)
+// Hook called when deploy any 
+public fw_DefaultDeploy_Post(ent)
 {
+	// Invalid entity?
+	if (is_nullent(ent))
+		return
+
+	// Get weapon's owner
+	new id = get_member(ent, m_pPlayer)
+	
+	// Owner not valid
+	if (!is_user_alive(id))
+		return;
+	
+	// Get weapon's id
+	new iWpn = get_member(ent, m_iId)
+	
+	new szModel[MAX_MODEL_LENGTH]
+
+	// Custom view model?
+	if (g_iCustomViewModelsPosition[id][iWpn] != NULLENT) {
+		ArrayGetString(g_aCustomViewModelsPath, g_iCustomViewModelsPosition[id][iWpn], szModel, charsmax(szModel))
+		set_entvar(id, var_viewmodel, szModel)
+	}
+	
+	// Custom weapon model?
+	if (g_iCustomWeaponModelsPosition[id][iWpn] != NULLENT) {
+		ArrayGetString(g_aCustomWeaponModelsPath, g_iCustomWeaponModelsPosition[id][iWpn], szModel, charsmax(szModel))
+		set_entvar(id, var_weaponmodel, szModel)
+	}
+}
+
+/**
+ * Private functions:
+ */
+AddCustomViewModel(id, iWpn, const szModel[]) {
+	g_iCustomViewModelsPosition[id][iWpn] = g_iCustomViewModelsCount
+	ArrayPushString(g_aCustomViewModelsPath, szModel)
+	g_iCustomViewModelsCount++
+}
+
+ReplaceCustomViewModel(id, iWpn, const szModel[]) {
+	ArraySetString(g_aCustomViewModelsPath, g_iCustomViewModelsPosition[id][iWpn], szModel)
+}
+
+RemoveCustomViewModel(id, iWpnID) {
+	// Get current item position in dynamic array 
+	new iPos = g_iCustomViewModelsPosition[id][iWpnID]
+	
+	// Delete model from dynamic array
+	ArrayDeleteItem(g_aCustomViewModelsPath, iPos)
+	g_iCustomViewModelsPosition[id][iWpnID] = NULLENT
+	g_iCustomViewModelsCount--
+	
+	// Fix view models array positions
+	for (id = 1; id <= MaxClients; id++) {
+		for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++) {
+			if (g_iCustomViewModelsPosition[id][iWpnID] > iPos)
+				g_iCustomViewModelsPosition[id][iWpnID]--
+		}
+	}
+}
+
+AddCustomWeaponModel(id, iWpnID, const szModel[]) {
+	ArrayPushString(g_aCustomWeaponModelsPath, szModel)
+	g_iCustomWeaponModelsPosition[id][iWpnID] = g_iCustomWeaponModelsCount
+	g_iCustomWeaponModelsCount++
+}
+
+ReplaceCustomWeaponModel(id, iWpnID, const szModel[]) {
+	ArraySetString(g_aCustomWeaponModelsPath, g_iCustomWeaponModelsPosition[id][iWpnID], szModel)
+}
+
+RemoveCustomWeaponModel(id, iWpnID) {
+	// Get current item position in dynamic array 
+	new iPos = g_iCustomWeaponModelsPosition[id][iWpnID]
+
+	// Delete model from dynamic array	
+	ArrayDeleteItem(g_aCustomWeaponModelsPath, iPos)
+	g_iCustomWeaponModelsPosition[id][iWpnID] = NULLENT
+	g_iCustomWeaponModelsCount--
+	
+	// Fix weapon models array positions
+	for (id = 1; id <= MaxClients; id++) {
+		for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++) {
+			if (g_iCustomWeaponModelsPosition[id][iWpnID] > iPos)
+				g_iCustomWeaponModelsPosition[id][iWpnID]--
+		}
+	}
+}
+
+/**
+ * Function of natives:
+ */
+public native_set_user_view_model(plugin_id, num_params) {
+	// Get player index
 	new id = get_param(1)
 	
-	if (!is_user_connected(id))
-	{
-		log_error(AMX_ERR_NATIVE, "[CS] Player is not in game (%d)", id)
+	// Player not found?
+	if (!is_user_connected(id)) {
+		// Print error on server console with date and time.
+		log_error(AMX_ERR_NATIVE, "[ZE] Player is not in game (%d)", id)
 		return false;
 	}
 	
-	new weaponid = get_param(2)
+	// Get weapon's id
+	new iWpnID = get_param(2)
 	
-	if (weaponid < CSW_FIRST_WEAPON || weaponid > CSW_LAST_WEAPON)
-	{
-		log_error(AMX_ERR_NATIVE, "[CS] Invalid weapon id (%d)", weaponid)
+	// Invalid weapon id?
+	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON)) {
+		// Print error on server console with date and time.
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid weapon id (%d)", iWpnID)
 		return false;
 	}
 	
-	new view_model[128]
-	get_string(3, view_model, charsmax(view_model))
+	// Get weapon's model.
+	new szModel[MAX_MODEL_LENGTH]
+	get_string(3, szModel, charsmax(szModel))
 	
 	// Check whether player already has a custom view model set
-	if (g_CustomViewModelsPosition[id][weaponid] == POSITION_NULL)
-		AddCustomViewModel(id, weaponid, view_model)
+	if (g_iCustomViewModelsPosition[id][iWpnID] == NULLENT)
+		AddCustomViewModel(id, iWpnID, szModel)
 	else
-		ReplaceCustomViewModel(id, weaponid, view_model)
+		ReplaceCustomViewModel(id, iWpnID, szModel)
 	
 	// Get current weapon's id
-	new current_weapon_ent = get_member(id, m_pActiveItem)
-	new current_weapon_id = pev_valid(current_weapon_ent) ? fm_cs_get_weapon_id(current_weapon_ent) : -1
+	new iWpnEnt = get_member(id, m_pActiveItem)
+	new iWeapon = is_entity(iWpnEnt) ? get_member(iWpnEnt, m_iId) : NULLENT
 	
 	// Model was set for the current weapon?
-	if (weaponid == current_weapon_id)
-	{
-		// Update weapon models manually
-		fw_Item_Deploy_Post(current_weapon_ent)
-	}
+	if (is_user_alive(id) && (iWeapon == iWpnID))
+		set_entvar(id, var_viewmodel, szModel) // Update weapon models manually
 	return true;
 }
 
-public native_reset_player_view_model(plugin_id, num_params)
-{
+public native_reset_user_view_model(plugin_id, num_params) {
+	// Get player index.
 	new id = get_param(1)
 	
-	if (!is_user_connected(id))
-	{
-		log_error(AMX_ERR_NATIVE, "[CS] Player is not in game (%d)", id)
+	// Player not found?
+	if (!is_user_connected(id)) {
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
 		return false;
 	}
 	
-	new weaponid = get_param(2)
+	// Get weapon's id
+	new iWpnID = get_param(2)
 	
-	if (weaponid < CSW_FIRST_WEAPON || weaponid > CSW_LAST_WEAPON)
-	{
-		log_error(AMX_ERR_NATIVE, "[CS] Invalid weapon id (%d)", weaponid)
+	// Invalid weapon id?
+	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON)) {
+		// Print error on server console with date and time.
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid weapon id (%d)", iWpnID)
 		return false;
 	}
 	
 	// Player doesn't have a custom view model, no need to reset
-	if (g_CustomViewModelsPosition[id][weaponid] == POSITION_NULL)
+	if (g_iCustomViewModelsPosition[id][iWpnID] == NULLENT)
 		return true;
 	
-	RemoveCustomViewModel(id, weaponid)
-	
-	// Get current weapon's id
-	new current_weapon_ent = get_member(id, m_pActiveItem)
-	new current_weapon_id = pev_valid(current_weapon_ent) ? fm_cs_get_weapon_id(current_weapon_ent) : -1
-	
-	// Model was reset for the current weapon?
-	if (weaponid == current_weapon_id)
-	{
-		// Let CS update weapon models
-		ExecuteHamB(Ham_Item_Deploy, current_weapon_ent)
-	}
+	// Remove view weapon model from dynamic array.
+	RemoveCustomViewModel(id, iWpnID)
 	return true;
 }
 
-public native_set_player_weap_model(plugin_id, num_params)
-{
+public native_set_user_weap_model(plugin_id, num_params) {
+	// Get player index.
 	new id = get_param(1)
 	
-	if (!is_user_connected(id))
-	{
-		log_error(AMX_ERR_NATIVE, "[CS] Player is not in game (%d)", id)
+	// Player not found?
+	if (!is_user_connected(id)) {
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
 		return false;
 	}
 	
-	new weaponid = get_param(2)
+	// Get weapon's id
+	new iWpnID = get_param(2)
 	
-	if (weaponid < CSW_FIRST_WEAPON || weaponid > CSW_LAST_WEAPON)
-	{
-		log_error(AMX_ERR_NATIVE, "[CS] Invalid weapon id (%d)", weaponid)
+	// Invalid weapon id?
+	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON)) {
+		// Print error on server console with date and time.
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid weapon id (%d)", iWpnID)
 		return false;
 	}
 	
-	new weapon_model[128]
-	get_string(3, weapon_model, charsmax(weapon_model))
+	new szModel[MAX_MODEL_LENGTH]
+	get_string(3, szModel, charsmax(szModel))
 	
 	// Check whether player already has a custom view model set
-	if (g_CustomWeaponModelsPosition[id][weaponid] == POSITION_NULL)
-		AddCustomWeaponModel(id, weaponid, weapon_model)
+	if (g_iCustomWeaponModelsPosition[id][iWpnID] == NULLENT)
+		AddCustomWeaponModel(id, iWpnID, szModel)
 	else
-		ReplaceCustomWeaponModel(id, weaponid, weapon_model)
+		ReplaceCustomWeaponModel(id, iWpnID, szModel)
 	
 	// Get current weapon's id
-	new current_weapon_ent = get_member(id, m_pActiveItem)
-	new current_weapon_id = pev_valid(current_weapon_ent) ? fm_cs_get_weapon_id(current_weapon_ent) : -1
+	new iWpnEnt = get_member(id, m_pActiveItem)
+	new iWeapon = is_entity(iWpnEnt) ? get_member(iWpnEnt, m_iId) : NULLENT
 	
 	// Model was reset for the current weapon?
-	if (weaponid == current_weapon_id)
-	{
-		// Update weapon models manually
-		fw_Item_Deploy_Post(current_weapon_ent)
-	}
+	if (is_user_alive(id) && (iWpnID == iWeapon))
+		set_entvar(id, var_weaponmodel, szModel) // Update weapon models manually
 	return true;
 }
 
-public native_reset_player_weap_model(plugin_id, num_params)
-{
+public native_reset_user_weap_model(plugin_id, num_params) {
+	// Get player index.
 	new id = get_param(1)
 	
-	if (!is_user_connected(id))
-	{
-		log_error(AMX_ERR_NATIVE, "[CS] Player is not in game (%d)", id)
+	// Player not found?
+	if (!is_user_connected(id)) {
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
 		return false;
 	}
 	
-	new weaponid = get_param(2)
+	// Get weapon's id
+	new iWpnID = get_param(2)
 	
-	if (weaponid < CSW_FIRST_WEAPON || weaponid > CSW_LAST_WEAPON)
-	{
-		log_error(AMX_ERR_NATIVE, "[CS] Invalid weapon id (%d)", weaponid)
+	// Invalid weapon id?
+	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON)) {
+		// Print error on server console with date and time.
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid weapon id (%d)", iWpnID)
 		return false;
 	}
 	
 	// Player doesn't have a custom weapon model, no need to reset
-	if (g_CustomWeaponModelsPosition[id][weaponid] == POSITION_NULL)
+	if (g_iCustomWeaponModelsPosition[id][iWpnID] == NULLENT)
 		return true;
 	
-	RemoveCustomWeaponModel(id, weaponid)
-	
-	// Get current weapon's id
-	new current_weapon_ent = get_member(id, m_pActiveItem)
-	new current_weapon_id = pev_valid(current_weapon_ent) ? fm_cs_get_weapon_id(current_weapon_ent) : -1
-	
-	// Model was reset for the current weapon?
-	if (weaponid == current_weapon_id)
-	{
-		// Let CS update weapon models
-		ExecuteHamB(Ham_Item_Deploy, current_weapon_ent)
-	}
+	// Remove weapon's model from dynamic array.
+	RemoveCustomWeaponModel(id, iWpnID)
 	return true;
-}
-
-AddCustomViewModel(id, weaponid, const view_model[])
-{
-	g_CustomViewModelsPosition[id][weaponid] = g_CustomViewModelsCount
-	ArrayPushString(g_CustomViewModelsNames, view_model)
-	g_CustomViewModelsCount++
-}
-
-ReplaceCustomViewModel(id, weaponid, const view_model[])
-{
-	ArraySetString(g_CustomViewModelsNames, g_CustomViewModelsPosition[id][weaponid], view_model)
-}
-
-RemoveCustomViewModel(id, weaponid)
-{
-	new pos_delete = g_CustomViewModelsPosition[id][weaponid]
-	
-	ArrayDeleteItem(g_CustomViewModelsNames, pos_delete)
-	g_CustomViewModelsPosition[id][weaponid] = POSITION_NULL
-	g_CustomViewModelsCount--
-	
-	// Fix view models array positions
-	for (id = 1; id <= g_MaxPlayers; id++)
-	{
-		for (weaponid = CSW_FIRST_WEAPON; weaponid <= CSW_LAST_WEAPON; weaponid++)
-		{
-			if (g_CustomViewModelsPosition[id][weaponid] > pos_delete)
-				g_CustomViewModelsPosition[id][weaponid]--
-		}
-	}
-}
-
-AddCustomWeaponModel(id, weaponid, const weapon_model[])
-{
-	ArrayPushString(g_CustomWeaponModelsNames, weapon_model)
-	g_CustomWeaponModelsPosition[id][weaponid] = g_CustomWeaponModelsCount
-	g_CustomWeaponModelsCount++
-}
-
-ReplaceCustomWeaponModel(id, weaponid, const weapon_model[])
-{
-	ArraySetString(g_CustomWeaponModelsNames, g_CustomWeaponModelsPosition[id][weaponid], weapon_model)
-}
-
-RemoveCustomWeaponModel(id, weaponid)
-{
-	new pos_delete = g_CustomWeaponModelsPosition[id][weaponid]
-	
-	ArrayDeleteItem(g_CustomWeaponModelsNames, pos_delete)
-	g_CustomWeaponModelsPosition[id][weaponid] = POSITION_NULL
-	g_CustomWeaponModelsCount--
-	
-	// Fix weapon models array positions
-	for (id = 1; id <= g_MaxPlayers; id++)
-	{
-		for (weaponid = CSW_FIRST_WEAPON; weaponid <= CSW_LAST_WEAPON; weaponid++)
-		{
-			if (g_CustomWeaponModelsPosition[id][weaponid] > pos_delete)
-				g_CustomWeaponModelsPosition[id][weaponid]--
-		}
-	}
-}
-
-public client_disconnected(id)
-{
-	// Remove custom models for player after disconnecting
-	new weaponid
-	for (weaponid = CSW_FIRST_WEAPON; weaponid <= CSW_LAST_WEAPON; weaponid++)
-	{
-		if (g_CustomViewModelsPosition[id][weaponid] != POSITION_NULL)
-			RemoveCustomViewModel(id, weaponid)
-		if (g_CustomWeaponModelsPosition[id][weaponid] != POSITION_NULL)
-			RemoveCustomWeaponModel(id, weaponid)
-	}
-}
-
-public fw_Item_Deploy_Post(weapon_ent)
-{
-	// Get weapon's owner
-	new owner = fm_cs_get_weapon_ent_owner(weapon_ent)
-	
-	// Owner not valid
-	if (!is_user_alive(owner))
-		return;
-	
-	// Get weapon's id
-	new weaponid = fm_cs_get_weapon_id(weapon_ent)
-	
-	// Custom view model?
-	if (g_CustomViewModelsPosition[owner][weaponid] != POSITION_NULL)
-	{
-		new view_model[128]
-		ArrayGetString(g_CustomViewModelsNames, g_CustomViewModelsPosition[owner][weaponid], view_model, charsmax(view_model))
-		set_entvar(owner, var_viewmodel, view_model)
-	}
-	
-	// Custom weapon model?
-	if (g_CustomWeaponModelsPosition[owner][weaponid] != POSITION_NULL)
-	{
-		new weapon_model[128]
-		ArrayGetString(g_CustomWeaponModelsNames, g_CustomWeaponModelsPosition[owner][weaponid], weapon_model, charsmax(weapon_model))
-		set_entvar(owner, var_weaponmodel, weapon_model)
-	}
-}
-
-stock fm_cs_get_weapon_ent_owner(ent)
-{
-	// Prevent server crash if entity's private data not initalized
-	if (pev_valid(ent) != PDATA_SAFE)
-		return -1;
-	
-	return get_pdata_cbase(ent, OFFSET_WEAPONOWNER, OFFSET_LINUX_WEAPONS);
-}
-
-stock fm_cs_get_weapon_id(ent)
-{
-	// Prevent server crash if entity's private data not initalized
-	if (pev_valid(ent) != PDATA_SAFE)
-		return -1;
-
-	return get_pdata_int(ent, OFFSET_WEAPONTYPE, OFFSET_LINUX_WEAPONS)
 }
