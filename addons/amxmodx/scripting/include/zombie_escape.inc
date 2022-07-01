@@ -11,6 +11,7 @@
 
 #define ZE_VERSION "1.6"
 #define AUTHORS "ZE Dev Team"
+#define ZE_HOMEURL "https://github.com/raheem-cs/Zombie-Escape"
 
 /*
 *	For more information about these natives and forwards, just vist our forum:
@@ -42,6 +43,10 @@ enum
 
 // Game mode return value.
 #define ZE_WRONG_GAME -1
+
+// Used in ze_resource.sma
+const MAX_MODEL_LENGTH = 64
+const MAX_SOUND_LENGTH = 64
 
 // Public Variables.
 public ze_pGameMode = 0
@@ -1093,3 +1098,25 @@ native ze_gamemode_get_count();
  *
  */
 native ze_gamemode_start(const game_id);
+
+/**
+ * Hide rank HUD for specific player.
+ *
+ * @param id 		Client index.
+ *
+ * @return 			ture  | If hidden successfully.
+ *					false | If player not connected.
+ *
+ */
+native ze_hide_user_rankhud(const id);
+
+/**
+ * Show rank HUD for specific player.
+ *
+ * @param id 		Client index.
+ *
+ * @return 			true  | If displays successfully.
+ *					false | If player not found.
+ *
+ */
+native ze_show_user_rankhud(const id);
