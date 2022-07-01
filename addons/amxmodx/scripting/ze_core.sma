@@ -370,11 +370,12 @@ public Score_Message(TaskID)
 
 public Fw_TraceAttack_Pre(iVictim, iAttacker, Float:flDamage, Float:flDirection[3], iTracehandle, bitsDamageType)
 {
+	// Invalid player?
 	if (iVictim == iAttacker || !is_user_connected(iVictim) || !is_user_connected(iAttacker))
 		return HC_CONTINUE // Prevent execute rest of codes and continue Trace attack.
 	
 	// Attacker and Victim is in same teams? Skip code blew
-	if (get_member(iAttacker, m_iTeam) == get_member(iVictim, m_iTeam))
+	if (get_user_team(iAttacker) == get_user_team(iVictim))
 		return HC_CONTINUE // Prevent execute rest of codes and continue Trace attack.
 	
 	// Round has over?
@@ -661,6 +662,9 @@ Set_User_Zombie(id, iAttacker = 0, Float:flDamage = 0.0)
 	{
 		// Death Message with Infection style, only if infection caused by player not server
 		SendDeathMsg(iAttacker, id, g_bSkullGreenColor)
+
+		// Fix dead attrib when send death message.
+		FixDeadAttrib(id)
 	}
 	
 	// Set player Zombie flag.
