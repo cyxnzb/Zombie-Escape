@@ -1,7 +1,6 @@
 #include <zombie_escape>
 
 // Keys
-const OFFSET_CSMENUCODE = 205
 const KEYSMENU = MENU_KEY_1|MENU_KEY_2|MENU_KEY_3|MENU_KEY_4|MENU_KEY_5|MENU_KEY_6|MENU_KEY_7|MENU_KEY_8|MENU_KEY_9|MENU_KEY_0
 
 public plugin_init()
@@ -36,11 +35,10 @@ public Cmd_ChooseTeam(id)
 // Main Menu
 public Show_Menu_Main(id)
 {
-	static szMenu[250]
-	new iLen
+	static szMenu[300], iLen
     
 	// Title
-	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%L^n^n", id, "MAIN_MENU_TITLE")
+	iLen = formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%L^n^n", id, "MAIN_MENU_TITLE")
 	
 	// 1. Buy Weapons
 	if (!ze_is_auto_buy_enabled(id)) // AutoBuy not enabled - normal case
@@ -72,9 +70,8 @@ public Show_Menu_Main(id)
     
 	// 0. Exit
 	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "^n^n\w0.\r %L", id, "EXIT")
-    
-	// Fix for AMXX custom menus
-	set_pdata_int(id, OFFSET_CSMENUCODE, 0)
+
+	// Show the Menu for player.
 	show_menu(id, KEYSMENU, szMenu, -1, "Main Menu")
 }
 
