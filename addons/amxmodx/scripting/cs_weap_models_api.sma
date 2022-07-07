@@ -11,7 +11,8 @@ new Array:g_aCustomViewModelsPath
 new Array:g_aCustomWeaponModelsPath
 
 // Forward allows register new natives.
-public plugin_natives() {
+public plugin_natives()
+{
 	register_library("cs_weap_models_api")
 
 	register_native("cs_set_player_view_model", "native_set_user_view_model")
@@ -23,12 +24,13 @@ public plugin_natives() {
 	register_native("ze_set_user_view_model", "native_set_user_view_model")
 	register_native("ze_reset_user_view_model", "native_reset_user_view_model")
 
-	register_native("ze_set_user_weapn_model", "native_set_user_weap_model")
-	register_native("ze_reset_user_weapn_model", "native_reset_user_weap_model")
+	register_native("ze_set_user_weap_model", "native_set_user_weap_model")
+	register_native("ze_reset_user_weap_model", "native_reset_user_weap_model")
 }
 
 // Forward called after server activation.
-public plugin_init() {
+public plugin_init()
+{
 	// Load plugin.
 	register_plugin("[ZE] Weapon Models APIs", ZE_VERSION, AUTHORS, ZE_HOMEURL)
 	
@@ -41,8 +43,10 @@ public plugin_init() {
 	
 	// Initialize array positions
 	new id, iWpnID
-	for (id = 1; id <= MaxClients; id++) {
-		for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++) {
+	for (id = 1; id <= MaxClients; id++)
+	{
+		for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++)
+		{
 			g_iCustomViewModelsPosition[id][iWpnID] = NULLENT
 			g_iCustomWeaponModelsPosition[id][iWpnID] = NULLENT
 		}
@@ -50,10 +54,12 @@ public plugin_init() {
 }
 
 // Forward called after player disconnected from server.
-public client_disconnected(id) {
+public client_disconnected(id)
+{
 	// Remove custom models for player after disconnecting
 	new iWpnID
-	for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++) {
+	for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++)
+	{
 		if (g_iCustomViewModelsPosition[id][iWpnID] != NULLENT)
 			RemoveCustomViewModel(id, iWpnID)
 		if (g_iCustomWeaponModelsPosition[id][iWpnID] != NULLENT)
@@ -68,26 +74,29 @@ public fw_DefaultDeploy_Post(ent)
 	if (is_nullent(ent))
 		return
 
+	// Static's
+	static szModel[MAX_MODEL_LENGTH], iWpn, id
+
 	// Get weapon's owner
-	new id = get_member(ent, m_pPlayer)
+	id = get_member(ent, m_pPlayer)
 	
 	// Owner not valid
 	if (!is_user_alive(id))
 		return;
 	
 	// Get weapon's id
-	new iWpn = get_member(ent, m_iId)
-	
-	new szModel[MAX_MODEL_LENGTH]
+	iWpn = get_member(ent, m_iId)
 
 	// Custom view model?
-	if (g_iCustomViewModelsPosition[id][iWpn] != NULLENT) {
+	if (g_iCustomViewModelsPosition[id][iWpn] != NULLENT)
+	{
 		ArrayGetString(g_aCustomViewModelsPath, g_iCustomViewModelsPosition[id][iWpn], szModel, charsmax(szModel))
 		set_entvar(id, var_viewmodel, szModel)
 	}
 	
 	// Custom weapon model?
-	if (g_iCustomWeaponModelsPosition[id][iWpn] != NULLENT) {
+	if (g_iCustomWeaponModelsPosition[id][iWpn] != NULLENT)
+	{
 		ArrayGetString(g_aCustomWeaponModelsPath, g_iCustomWeaponModelsPosition[id][iWpn], szModel, charsmax(szModel))
 		set_entvar(id, var_weaponmodel, szModel)
 	}
@@ -96,17 +105,20 @@ public fw_DefaultDeploy_Post(ent)
 /**
  * Private functions:
  */
-AddCustomViewModel(id, iWpn, const szModel[]) {
+AddCustomViewModel(id, iWpn, const szModel[])
+{
 	g_iCustomViewModelsPosition[id][iWpn] = g_iCustomViewModelsCount
 	ArrayPushString(g_aCustomViewModelsPath, szModel)
 	g_iCustomViewModelsCount++
 }
 
-ReplaceCustomViewModel(id, iWpn, const szModel[]) {
+ReplaceCustomViewModel(id, iWpn, const szModel[])
+{
 	ArraySetString(g_aCustomViewModelsPath, g_iCustomViewModelsPosition[id][iWpn], szModel)
 }
 
-RemoveCustomViewModel(id, iWpnID) {
+RemoveCustomViewModel(id, iWpnID)
+{
 	// Get current item position in dynamic array 
 	new iPos = g_iCustomViewModelsPosition[id][iWpnID]
 	
@@ -116,25 +128,30 @@ RemoveCustomViewModel(id, iWpnID) {
 	g_iCustomViewModelsCount--
 	
 	// Fix view models array positions
-	for (id = 1; id <= MaxClients; id++) {
-		for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++) {
+	for (id = 1; id <= MaxClients; id++)
+	{
+		for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++)
+		{
 			if (g_iCustomViewModelsPosition[id][iWpnID] > iPos)
 				g_iCustomViewModelsPosition[id][iWpnID]--
 		}
 	}
 }
 
-AddCustomWeaponModel(id, iWpnID, const szModel[]) {
+AddCustomWeaponModel(id, iWpnID, const szModel[])
+{
 	ArrayPushString(g_aCustomWeaponModelsPath, szModel)
 	g_iCustomWeaponModelsPosition[id][iWpnID] = g_iCustomWeaponModelsCount
 	g_iCustomWeaponModelsCount++
 }
 
-ReplaceCustomWeaponModel(id, iWpnID, const szModel[]) {
+ReplaceCustomWeaponModel(id, iWpnID, const szModel[])
+{
 	ArraySetString(g_aCustomWeaponModelsPath, g_iCustomWeaponModelsPosition[id][iWpnID], szModel)
 }
 
-RemoveCustomWeaponModel(id, iWpnID) {
+RemoveCustomWeaponModel(id, iWpnID)
+{
 	// Get current item position in dynamic array 
 	new iPos = g_iCustomWeaponModelsPosition[id][iWpnID]
 
@@ -144,8 +161,10 @@ RemoveCustomWeaponModel(id, iWpnID) {
 	g_iCustomWeaponModelsCount--
 	
 	// Fix weapon models array positions
-	for (id = 1; id <= MaxClients; id++) {
-		for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++) {
+	for (id = 1; id <= MaxClients; id++)
+	{
+		for (iWpnID = CSW_P228; iWpnID <= CSW_LAST_WEAPON; iWpnID++)
+		{
 			if (g_iCustomWeaponModelsPosition[id][iWpnID] > iPos)
 				g_iCustomWeaponModelsPosition[id][iWpnID]--
 		}
@@ -155,12 +174,14 @@ RemoveCustomWeaponModel(id, iWpnID) {
 /**
  * Function of natives:
  */
-public native_set_user_view_model(plugin_id, num_params) {
+public native_set_user_view_model(plugin_id, num_params)
+{
 	// Get player index
 	new id = get_param(1)
 	
 	// Player not found?
-	if (!is_user_connected(id)) {
+	if (!is_user_connected(id))
+	{
 		// Print error on server console with date and time.
 		log_error(AMX_ERR_NATIVE, "[ZE] Player is not in game (%d)", id)
 		return false;
@@ -170,7 +191,8 @@ public native_set_user_view_model(plugin_id, num_params) {
 	new iWpnID = get_param(2)
 	
 	// Invalid weapon id?
-	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON)) {
+	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON))
+	{
 		// Print error on server console with date and time.
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid weapon id (%d)", iWpnID)
 		return false;
@@ -189,19 +211,21 @@ public native_set_user_view_model(plugin_id, num_params) {
 	// Get current weapon's id
 	new iWpnEnt = get_member(id, m_pActiveItem)
 	new iWeapon = is_entity(iWpnEnt) ? get_member(iWpnEnt, m_iId) : NULLENT
-	
+
 	// Model was set for the current weapon?
 	if (is_user_alive(id) && (iWeapon == iWpnID))
 		set_entvar(id, var_viewmodel, szModel) // Update weapon models manually
 	return true;
 }
 
-public native_reset_user_view_model(plugin_id, num_params) {
+public native_reset_user_view_model(plugin_id, num_params)
+{
 	// Get player index.
 	new id = get_param(1)
 	
 	// Player not found?
-	if (!is_user_connected(id)) {
+	if (!is_user_connected(id))
+	{
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
 		return false;
 	}
@@ -210,7 +234,8 @@ public native_reset_user_view_model(plugin_id, num_params) {
 	new iWpnID = get_param(2)
 	
 	// Invalid weapon id?
-	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON)) {
+	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON))
+	{
 		// Print error on server console with date and time.
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid weapon id (%d)", iWpnID)
 		return false;
@@ -225,12 +250,14 @@ public native_reset_user_view_model(plugin_id, num_params) {
 	return true;
 }
 
-public native_set_user_weap_model(plugin_id, num_params) {
+public native_set_user_weap_model(plugin_id, num_params)
+{
 	// Get player index.
 	new id = get_param(1)
 	
 	// Player not found?
-	if (!is_user_connected(id)) {
+	if (!is_user_connected(id))
+	{
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
 		return false;
 	}
@@ -239,7 +266,8 @@ public native_set_user_weap_model(plugin_id, num_params) {
 	new iWpnID = get_param(2)
 	
 	// Invalid weapon id?
-	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON)) {
+	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON))
+	{
 		// Print error on server console with date and time.
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid weapon id (%d)", iWpnID)
 		return false;
@@ -264,12 +292,14 @@ public native_set_user_weap_model(plugin_id, num_params) {
 	return true;
 }
 
-public native_reset_user_weap_model(plugin_id, num_params) {
+public native_reset_user_weap_model(plugin_id, num_params)
+{
 	// Get player index.
 	new id = get_param(1)
 	
 	// Player not found?
-	if (!is_user_connected(id)) {
+	if (!is_user_connected(id))
+	{
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
 		return false;
 	}
@@ -278,7 +308,8 @@ public native_reset_user_weap_model(plugin_id, num_params) {
 	new iWpnID = get_param(2)
 	
 	// Invalid weapon id?
-	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON)) {
+	if ((iWpnID <= CSW_NONE) || (iWpnID > CSW_LAST_WEAPON))
+	{
 		// Print error on server console with date and time.
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid weapon id (%d)", iWpnID)
 		return false;
