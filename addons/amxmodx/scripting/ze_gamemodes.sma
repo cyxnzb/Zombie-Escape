@@ -16,19 +16,12 @@ enum _:FORWARDS
 }
 
 // Enums (Colors Array).
-enum 
+enum _:Colors
 {
 	Red = 0,
 	Green,
 	Blue
 }
-
-// Cvars Variables.
-new g_pCvar_iGamemodeDelay
-new g_pCvar_iFirstDefaultGame
-new g_pCvar_iCountdownMode
-new g_pCvar_iCountRandomColor
-new g_pCvar_iCountdownColors[3]
 
 // Global Variables.
 new g_iGameCount
@@ -37,7 +30,12 @@ new g_iSyncMsgHud
 new g_iDefaultGame
 new g_iFwResult
 new g_iGameCurrent
+new g_iGamemodeDelay
+new g_iCountdownMode
+new g_iCountdownColors[Colors]
 new g_iForwards[FORWARDS]
+new bool:g_bCountRandomColor
+new bool:g_bFirstDefaultGame
 
 // Dynamic Arrays.
 new Array:g_aGameName
@@ -65,13 +63,13 @@ public plugin_init()
 	register_event("TextMsg", "fw_MapRestart_Event", "a", "2=#Game_Commencing", "2=#Game_will_restart_in", "2=#Round_Draw")
 
 	// Cvars.
-	g_pCvar_iGamemodeDelay 			= register_cvar("ze_gamemodes_delay", "10")
-	g_pCvar_iFirstDefaultGame 		= register_cvar("ze_gamemodes_firstround", "1")
-	g_pCvar_iCountdownMode 			= register_cvar("ze_countdown_mode", "1")
-	g_pCvar_iCountRandomColor 		= register_cvar("ze_countdown_random_color", "1")
-	g_pCvar_iCountdownColors[Red] 	= register_cvar("ze_countdown_red", "0")
-	g_pCvar_iCountdownColors[Green] = register_cvar("ze_countdown_green", "0")
-	g_pCvar_iCountdownColors[Blue] 	= register_cvar("ze_countdown_blue", "200")
+	bind_pcvar_num(create_cvar("ze_gamemodes_delay", "10"), g_iGamemodeDelay)
+	bind_pcvar_num(create_cvar("ze_gamemodes_firstround", "1"), g_bFirstDefaultGame)
+	bind_pcvar_num(create_cvar("ze_countdown_mode", "1"), g_iCountdownMode)
+	bind_pcvar_num(create_cvar("ze_countdown_random_color", "1"), g_bCountRandomColor)
+	bind_pcvar_num(create_cvar("ze_countdown_red", "0"), g_iCountdownColors[Red])
+	bind_pcvar_num(create_cvar("ze_countdown_green", "0"), g_iCountdownColors[Green])
+	bind_pcvar_num(create_cvar("ze_countdown_blue", "200"), g_iCountdownColors[Blue])
 
 	// Initialize custom forwards.
 	g_iForwards[FORWARD_GAMEMODE_CHOSEN_PRE] 	= CreateMultiForward("ze_gamemode_chosen_pre", ET_CONTINUE, FP_CELL, FP_CELL)
@@ -104,7 +102,7 @@ public ze_game_started()
 	pausePlugins()
 
 	// Get countdown period.
-	g_iCountdown = get_pcvar_num(g_pCvar_iGamemodeDelay)
+	g_iCountdown = g_iGamemodeDelay
 
 	// New Task, for gamemode countdown.
 	set_task(1.0, "show_CountDown", TASK_COUNTDOWN, "", 0, "b")
@@ -139,26 +137,26 @@ public show_CountDown(iTask)
 	}
 
 	// Get countdown mode (HUD type).
-	switch (get_pcvar_num(g_pCvar_iCountdownMode)) 
+	switch (g_iCountdownMode) 
 	{
 		case 0: // Normal Text (center)
 			client_print(0, print_center, "%L", LANG_PLAYER, "RUN_NOTICE", g_iCountdown--)
 		case 1: // HUD.
 		{
 			// Show countdown HUD for all clients.
-			if (get_pcvar_num(g_pCvar_iCountRandomColor))
+			if (g_bCountRandomColor)
 				set_hudmessage(random(256), random(256), random(256), HUD_X, HUD_Y, 0, 1.0, 1.0, 0.0, 0.0)
 			else 
-				set_hudmessage(get_pcvar_num(g_pCvar_iCountdownColors[Red]), get_pcvar_num(g_pCvar_iCountdownColors[Green]), get_pcvar_num(g_pCvar_iCountdownColors[Blue]), HUD_X, HUD_Y, 0, 1.0, 1.0, 0.0, 0.0)
+				set_hudmessage(g_iCountdownColors[Red], g_iCountdownColors[Green], g_iCountdownColors[Blue], HUD_X, HUD_Y, 0, 1.0, 1.0, 0.0, 0.0)
 			ShowSyncHudMsg(0, g_iSyncMsgHud, "%L", LANG_PLAYER, "RUN_NOTICE", g_iCountdown--)
 		}
 		case 2: // Director HUD.
 		{
 			// Show countdown DHUD for all clients.
-			if (get_pcvar_num(g_pCvar_iCountRandomColor))
+			if (g_bCountRandomColor)
 				set_dhudmessage(random(256), random(256), random(256), HUD_X, HUD_Y, 0, 1.0, 1.0, 0.0, 0.0)
 			else 
-				set_dhudmessage(get_pcvar_num(g_pCvar_iCountdownColors[Red]), get_pcvar_num(g_pCvar_iCountdownColors[Green]), get_pcvar_num(g_pCvar_iCountdownColors[Blue]), HUD_X, HUD_Y, 0, 1.0, 1.0, 0.0, 0.0)
+				set_dhudmessage(g_iCountdownColors[Red], g_iCountdownColors[Green], g_iCountdownColors[Blue], HUD_X, HUD_Y, 0, 1.0, 1.0, 0.0, 0.0)
 			show_dhudmessage(0, "%L", LANG_PLAYER, "RUN_NOTICE", g_iCountdown--)
 		}
 	}
@@ -167,7 +165,7 @@ public show_CountDown(iTask)
 public chooseGame()
 {
 	// It's a first round?
-	if ((ze_get_round_number() > 1) && !get_pcvar_num(g_pCvar_iFirstDefaultGame))
+	if ((ze_get_round_number() > 1) && !g_bFirstDefaultGame)
 	{
 		// Local Variables.
 		new szFileName[64], iTime, iGame
