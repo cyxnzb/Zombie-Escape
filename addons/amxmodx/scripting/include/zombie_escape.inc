@@ -29,20 +29,29 @@ enum
 }
 
 // Items returns used in ze_select_item_pre()
-#define ZE_WRONG_ITEM -1
-#define ZE_ITEM_AVAILABLE 0
-#define ZE_ITEM_UNAVAILABLE 1
-#define ZE_ITEM_DONT_SHOW 2
+enum (+=1)
+{
+	ZE_WRONG_ITEM = -1,
+	ZE_ITEM_AVAILABLE,
+	ZE_ITEM_UNAVAILABLE,
+	ZE_ITEM_DONT_SHOW
+}
 
 // General forwards return values
-#define ZE_CONTINUE 0
-#define ZE_STOP 1
+enum
+{
+	ZE_CONTINUE = 0,
+	ZE_STOP
+}
 
 // Max Extra-Items
 #define MAX_EXTRA_ITEMS 60
 
 // Game mode return value.
-#define ZE_WRONG_GAME -1
+enum
+{
+	ZE_WRONG_GAME = -1
+}
 
 // Used in ze_resource.sma
 const MAX_MODEL_LENGTH = 64
@@ -890,38 +899,42 @@ native ze_get_item_vip(iItemid);
 */
 native ze_zombie_in_madness(id);
 
-/*
-* Description:	Show weapon menu for player.
-*
-* @param id		Client index.
-*
-* @return		true  | If menu opened successfully.
-*				false | If this player not connected.
-*
-*/
+/**
+ * Description:	Show weapon menu for player.
+ *
+ * @param id	Client index.
+ *
+ * @return		true  | If menu opened successfully.
+ *				false | If this player not connected.
+ *
+ * @error 		If player not connected.
+ *
+ */
 native ze_show_weapon_menu(id);
 
-/*
-* Description:	Check if auto buy enabled or not.
-*
-* @param id		Client index.
-*
-* @return		true  | If auto buy enabled.
-*				false | If auto buy disabled.
-*				-1 	  | If this player not connected.
-*
-*/
+/**
+ * Description:	Check if auto buy enabled or not.
+ *
+ * @param id	Client index.
+ *
+ * @return		true  | If auto buy enabled.
+ *				false | If auto buy disabled.
+ *				-1 	  | If this player not connected.
+ *
+ */
 native ze_is_auto_buy_enabled(id);
 
-/*
-* Description:	This will disable auto buy for player.
-*
-* @param id		Client index.
-*
-* @return		true  | If disabled successfully.
-*				false | If this player not connected.
-*
-*/
+/**
+ * Description:	This will disable auto buy for player.
+ *
+ * @param id	Client index.
+ *
+ * @return		true  | If disabled successfully.
+ *				false | If this player not connected.
+ *
+ * @error 		If player not connected.
+ *
+ */
 native ze_disable_auto_buy(id);
 
 /*
@@ -1100,23 +1113,36 @@ native ze_gamemode_get_count();
 native ze_gamemode_start(const game_id);
 
 /**
- * Hide rank HUD for specific player.
+ * Description: Hide rank HUD for specific player.
  *
- * @param id 		Client index.
+ * @param id 	Client index.
  *
- * @return 			ture  | If hidden successfully.
- *					false | If player not connected.
+ * @return 		ture  | If hidden successfully.
+ *				false | If player not connected.
  *
  */
 native ze_hide_user_rankhud(const id);
 
 /**
- * Show rank HUD for specific player.
+ * Description: Show rank HUD for specific player.
  *
- * @param id 		Client index.
+ * @param id 	Client index.
  *
- * @return 			true  | If displays successfully.
- *					false | If player not found.
+ * @return 		true  | If displays successfully.
+ *				false | If player not found.
  *
  */
 native ze_show_user_rankhud(const id);
+
+/**
+ * Description: Check player is first Zombie or not.
+ *
+ * @param id 	Client index.
+ *
+ * @return 		true 	| If player is first Zombie.
+ *				false 	| If player in not first Zombie.
+ *
+ * @note 		Native will return false, If player not connected or not zombie.
+ *
+ */
+native ze_is_user_first_zombie(const id);
