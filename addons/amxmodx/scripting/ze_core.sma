@@ -136,6 +136,7 @@ public plugin_init()
 	new pCvar_flZombieSpeed = create_cvar("ze_zombie_speed", "350.0")
 	new pCvar_iFreezeTime = create_cvar("ze_freeze_time", "20")
 	new pCvar_iRoundTime = create_cvar("ze_round_time", "9.0")
+	new pCvar_iReqPlayers = create_cvar("ze_required_players", "2")
 
 	// Create new CVars and Bind CVars (Store automatically new value in Global Variables).
 	bind_pcvar_num(pCvar_iFreezeTime, g_iFreezeTime)
@@ -146,7 +147,7 @@ public plugin_init()
 	bind_pcvar_num(create_cvar("ze_zombie_health", "10000"), g_iZombieHealth)
 	bind_pcvar_num(create_cvar("ze_zombie_gravity", "640"), g_iZombieGravity)
 	bind_pcvar_float(pCvar_flZombieSpeed, g_flZombieSpeed)
-	bind_pcvar_num(create_cvar("ze_required_players", "2"), g_iRequiredPlayers)
+	bind_pcvar_num(pCvar_iReqPlayers, g_iRequiredPlayers)
 	bind_pcvar_num(create_cvar("ze_score_message_type", "1"), g_iScoreMessageType)
 	bind_pcvar_num(create_cvar("ze_score_message_red", "200"), g_iScoreMessageColors[Red])
 	bind_pcvar_num(create_cvar("ze_score_message_green", "100"), g_iScoreMessageColors[Green])
@@ -159,6 +160,7 @@ public plugin_init()
 	hook_cvar_change(pCvar_iFreezeTime, "fw_CVarFreezeTime")
 	hook_cvar_change(pCvar_iRoundTime, "fw_CVarRoundTime")
 	hook_cvar_change(pCvar_flZombieSpeed, "fw_CvarMaxSpeed")
+	hook_cvar_change(pCvar_iReqPlayers, "fw_CVarReqPlayers")
 
 	// Check Round Time to Terminate it
 	set_task(1.0, "Check_RoundTimeleft", ROUND_TIME_LEFT, _, _, "b")
@@ -180,6 +182,12 @@ public fw_CVarRoundTime(pCvar, const szOldVal[], const szNewVal[]) {
 public fw_CvarMaxSpeed(pCvar, const szOldVal[], const szNewVal[]) {
 	// Replace value in sv_maxspeed.
 	set_cvar_string("sv_maxspeed", szNewVal)	
+}
+
+// Hook called when change the value in ze_required_players.
+public fw_CVarReqPlayers(pCvar, const szOldVal[], const szNewVal[]) {
+	// Replace value in sv_maxspeed.
+	set_task(0.1, "Check_AllPlayersNumber")	
 }
 
 public plugin_cfg()
@@ -476,6 +484,7 @@ public Check_RoundTimeleft()
 public client_disconnected(id)
 {
 	// Reset speed for this dropped id
+	g_bIsZombie[id] = false
 	g_bHSpeedUsed[id] = false
 	g_bZSpeedUsed[id] = false
 	g_bIsGravityUsed[id] = false
@@ -572,7 +581,7 @@ public Fw_HandleMenu_ChooseTeam_Post(id, MenuChooseTeam:iSlot)
 		g_bEnteredNotChoosed[id] = true
 
 		// Switch player to CTs team.
-		rg_join_team(id, TEAM_CT)
+		rg_set_user_team(id, TEAM_CT)
 	}
 	
 	// Check player has chosen random team?
@@ -582,7 +591,7 @@ public Fw_HandleMenu_ChooseTeam_Post(id, MenuChooseTeam:iSlot)
 		g_bEnteredNotChoosed[id] = true
 
 		// Switch player to CTs team.
-		rg_join_team(id, TEAM_CT)
+		rg_set_user_team(id, TEAM_CT)
 	}
 	
 	// Add Delay and Check Conditions To start the Game (Delay needed)
@@ -609,6 +618,43 @@ public Check_AllPlayersNumber()
 	}
 }
 
+public Map_Restart()
+{
+	// Add Delay To help Rest Scores if player kill himself, and there no one else him so round draw (Delay needed)
+	set_task(0.1, "Reset_Score_Message")
+
+	// Execute forward ze_roundend(WinTeam).
+	ExecuteForward(g_iForwards[FORWARD_ROUNDEND], _/* Ignore return value */, 0)
+}
+
+public Reset_Score_Message()
+{
+	g_iHumansScore = 0
+	g_iZombiesScore = 0
+	g_iRoundNum = 0
+}
+
+public plugin_end()
+{
+	// Destroy Trie.
+	TrieDestroy(g_tChosenPlayers)
+}
+
+public Message_Teamscore()
+{
+	new szTeam[2]
+	get_msg_arg_string(1, szTeam, charsmax(szTeam))
+	
+	switch (szTeam[0])
+	{
+		case 'C': set_msg_arg_int(2, ARG_BYTE, g_iHumansScore)
+		case 'T': set_msg_arg_int(2, ARG_BYTE, g_iZombiesScore)
+	}
+}
+
+/**
+ * Private functions:
+ */
 Set_User_Human(id)
 {
 	// Player not alive?
@@ -762,40 +808,6 @@ finish_Round(iTeam)
 	}
 }
 
-public Map_Restart()
-{
-	// Add Delay To help Rest Scores if player kill himself, and there no one else him so round draw (Delay needed)
-	set_task(0.1, "Reset_Score_Message")
-
-	// Execute forward ze_roundend(WinTeam).
-	ExecuteForward(g_iForwards[FORWARD_ROUNDEND], _/* Ignore return value */, 0)
-}
-
-public Reset_Score_Message()
-{
-	g_iHumansScore = 0
-	g_iZombiesScore = 0
-	g_iRoundNum = 0
-}
-
-public plugin_end()
-{
-	// Destroy Trie.
-	TrieDestroy(g_tChosenPlayers)
-}
-
-public Message_Teamscore()
-{
-	new szTeam[2]
-	get_msg_arg_string(1, szTeam, charsmax(szTeam))
-	
-	switch (szTeam[0])
-	{
-		case 'C': set_msg_arg_int(2, ARG_BYTE, g_iHumansScore)
-		case 'T': set_msg_arg_int(2, ARG_BYTE, g_iZombiesScore)
-	}
-}
-
 /**
  * Functions of natives:
  */
@@ -811,6 +823,10 @@ public native_ze_is_user_zombie(id)
 
 public native_ze_is_user_zombie_ex(id)
 {
+	// Player not found?
+	if (!id || (id > MaxClients))
+		return false
+
 	return g_bIsZombie[id]
 }
 
