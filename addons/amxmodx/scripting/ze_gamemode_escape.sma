@@ -8,9 +8,6 @@ const TASK_COUNTDOWN = 3000
 const Float:HUD_X = -1.00
 const Float:HUD_Y = 0.25
 
-// Settings file.
-new const ZE_SETTING_RESOURCES[] = "zombie_escape.ini"
-
 // Enums (Custom Forwards).
 enum _:FORWARDS
 {
@@ -20,7 +17,7 @@ enum _:FORWARDS
 }
 
 // Enums (Colors Array).
-enum
+enum _:Colors
 {
 	Red = 0,
 	Green,
@@ -30,28 +27,26 @@ enum
 // Default gamemode sound.
 new const g_szStartSound[][] = { "ambience/the_horror2.wav", "ambience/the_horror3.wav" }
 
-// Cvars Variables.
-new g_pCvar_iMode
-new g_pCvar_iChance
-new g_pCvar_iNoticeMsg
-new g_pCvar_iNoticeColors[3]
-new g_pCvar_iNoticeSound
-new g_pCvar_iReleaseHud
-new g_pCvar_iSmartRandom
-new g_pCvar_iReleasTime
-new g_pCvar_iReleasColors[3]
-new g_pCvar_iFirstZombieHealth
-new g_pCvar_iRespawnAsZombie
-
 // Global Variables.
 new g_iGame
-new g_iRoundMode
+new g_iMode
+new g_iChance
+new g_iNoticeMsg
+new g_iReleaseHud
+new g_iReleasTime
 new g_iSyncMsgHud
 new g_iCountdown
+new g_iFirstZombieHealth
 new g_iForwards[FORWARDS]
+new g_iNoticeColors[Colors]
+new g_iReleasColors[Colors]
+new bool:g_bNoticeSound
+new bool:g_bSmartRandom
 new bool:g_bBlockInfection
 new bool:g_bRespawnAsZombie
+new bool:g_bIsFirstZombie[MAX_PLAYERS+1]
 new bool:g_bIsZombieFrozen[MAX_PLAYERS+1]
+new Float:g_flRoundEndDelay
 
 // Dynamic Arrays
 new Array:g_aStartSound
@@ -67,34 +62,36 @@ public plugin_natives()
 {
 	register_native("ze_is_zombie_frozen", "native_is_zombie_frozen", 1)
 	register_native("ze_remove_zombie_freeze_msg", "native_remove_zombie_freeze_msg", 1)
+	register_native("ze_is_user_first_zombie", "native_is_user_first_zombie", 1)
 }
 
 // Forward called after server activation.
 public plugin_init()
 {
 	// Load plugin.
-	register_plugin("[ZE] Gamemode: Escape", ZE_VERSION, AUTHORS)
+	register_plugin("[ZE] Gamemode: Escape", ZE_VERSION, AUTHORS, ZE_HOMEURL, "Game mode: Escape Mode.")
 
 	// Hook Chains.
 	g_pHookTraceAttack = RegisterHookChain(RG_CBasePlayer_TraceAttack, "fw_TraceAttack_Pre", 0)
 	DisableHookChain(g_pHookTraceAttack) // Disable hook "TraceAttack" to allow bullet damage.
 
 	// Cvars.
-	g_pCvar_iMode 					= register_cvar("ze_escape_mode", "0")
-	g_pCvar_iChance 				= register_cvar("ze_escape_chance", "20")
-	g_pCvar_iNoticeMsg 				= register_cvar("ze_escape_notice", "2")
-	g_pCvar_iNoticeColors[Red] 		= register_cvar("ze_escape_notice_red", "50")
-	g_pCvar_iNoticeColors[Green] 	= register_cvar("ze_escape_notice_green", "100")
-	g_pCvar_iNoticeColors[Blue] 	= register_cvar("ze_escape_notice_blue", "255")
-	g_pCvar_iReleaseHud 			= register_cvar("ze_releasetime_mode", "1")
-	g_pCvar_iReleasColors[Red]		= register_cvar("ze_releasetime_red", "255")
-	g_pCvar_iReleasColors[Green]	= register_cvar("ze_releasetime_green", "255")
-	g_pCvar_iReleasColors[Blue]		= register_cvar("ze_releasetime_blue", "0")
-	g_pCvar_iNoticeSound 			= register_cvar("ze_escape_sounds", "1")
-	g_pCvar_iSmartRandom 			= register_cvar("ze_smart_random", "1")
-	g_pCvar_iReleasTime 			= register_cvar("ze_release_time", "15")
-	g_pCvar_iFirstZombieHealth 		= register_cvar("ze_first_zombies_health", "20000")
-	g_pCvar_iRespawnAsZombie 		= register_cvar("ze_respawn_as_zombie", "1")
+	bind_pcvar_num(create_cvar("ze_escape_type", "0"), g_iMode)
+	bind_pcvar_num(create_cvar("ze_escape_chance", "20"), g_iChance)
+	bind_pcvar_num(create_cvar("ze_escape_notice", "2"), g_iNoticeMsg)
+	bind_pcvar_num(create_cvar("ze_escape_notice_red", "255"), g_iNoticeColors[Red])
+	bind_pcvar_num(create_cvar("ze_escape_notice_green", "100"), g_iNoticeColors[Green])
+	bind_pcvar_num(create_cvar("ze_escape_notice_blue", "50"), g_iNoticeColors[Blue])
+	bind_pcvar_num(create_cvar("ze_releasetime_mode", "1"), g_iReleaseHud)
+	bind_pcvar_num(create_cvar("ze_releasetime_red", "255"), g_iReleasColors[Red])
+	bind_pcvar_num(create_cvar("ze_releasetime_green", "255"), g_iReleasColors[Green])
+	bind_pcvar_num(create_cvar("ze_releasetime_blue", "0"), g_iReleasColors[Blue])
+	bind_pcvar_num(create_cvar("ze_escape_sounds", "1"), g_bNoticeSound)
+	bind_pcvar_num(create_cvar("ze_smart_random", "1"), g_bSmartRandom)
+	bind_pcvar_num(create_cvar("ze_release_time", "15"), g_iReleasTime)
+	bind_pcvar_num(create_cvar("ze_first_zombies_health", "20000"), g_iFirstZombieHealth)
+	bind_pcvar_num(create_cvar("ze_respawn_as_zombie", "1"), g_bRespawnAsZombie)
+	bind_pcvar_float(get_cvar_pointer("ze_round_end_delay"), g_flRoundEndDelay)
 
 	// New gamemode.
 	g_iGame = ze_gamemode_register("Escape")
@@ -133,13 +130,10 @@ public plugin_precache()
 	// Load start sound from ini file.
 	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "Escape Mode", g_aStartSound)
 
-	new iArrSize, iNum
-
-	// Get number of sounds in dyn array.
-	iArrSize = ArraySize(g_aStartSound)
+	new iNum
 
 	// Dyn array is empty?
-	if (!iArrSize)
+	if (!ArraySize(g_aStartSound))
 	{
 		// Store default sounds in dyn array.
 		for (iNum = 0; iNum < sizeof(g_szStartSound); iNum++)
@@ -151,6 +145,9 @@ public plugin_precache()
 
 	new szSound[MAX_SOUND_LENGTH]
 
+	// Get number of sounds in dyn array.
+	new iArrSize = ArraySize(g_aStartSound)
+
 	// Precache Sounds.
 	for (iNum = 0; iNum < iArrSize; iNum++)
 	{
@@ -158,7 +155,7 @@ public plugin_precache()
 		ArrayGetString(g_aStartSound, iNum, szSound, charsmax(szSound))
 
 		// Precache Generic File (.mp3).
-		if (equali(szSound[strlen(szSound) - 4], ".mp3"))
+		if (is_format(szSound, "mp3"))
 		{
 			// Add path (sound/..)
 			format(szSound, charsmax(szSound), "sound/%s", szSound)
@@ -168,6 +165,20 @@ public plugin_precache()
 		{
 			precache_sound(szSound)
 		}
+	}
+}
+
+// Forward called when player join the server.
+public client_putinserver(id)
+{
+	// Don't respawn player Zombie?
+	if (!g_bRespawnAsZombie && !get_member_game(m_iNumTerrorist))
+	{
+		// Restart round (Don't reset score or round number).
+		rg_round_end(g_flRoundEndDelay, WINSTATUS_NONE, ROUND_END_DRAW, "", "")
+
+		// Print text in center.
+		client_print(0, print_center, "%L", LANG_PLAYER, "ESCAPE_DRAW")
 	}
 }
 
@@ -187,16 +198,10 @@ public ze_game_started_pre()
 	arrayset(g_bIsZombieFrozen, false, sizeof(g_bIsZombieFrozen))
 }
 
-// Forward called every New Round (after gamestarted).
-public ze_game_started()
-{
-	// Get mode.
-	g_iRoundMode = get_pcvar_num(g_pCvar_iMode)
-}
-
 // Forward called when player spawn.
 public ze_player_spawn_post(id)
 {
+	// Respawn player Zombie?
 	if (g_bRespawnAsZombie)
 	{
 		// Allow spawning player Zombie.
@@ -204,8 +209,8 @@ public ze_player_spawn_post(id)
 	}
 }
 
-// Forward called when player disconnect.
-public ze_player_disconnect(id)
+// Forward called when player disconnected from server.
+public client_disconnected(id)
 {
 	new szAuthId[34]
 
@@ -214,15 +219,15 @@ public ze_player_disconnect(id)
 
 	// Remove AuthId of player from Trie.
 	TrieDeleteKey(g_tChosenPlayers, szAuthId)
+
+	// Reset boolean.
+	g_bIsFirstZombie[id] = false
+	g_bIsZombieFrozen[id] = false
 }
 
 // Hook called when player Trace attack.
 public fw_TraceAttack_Pre(iVictim, iAttacker, Float:flDamage, Float:vDirection[3], pTraceHandle, iDamageType)
-{
-	// Invalid player?
-	if (!is_user_connected(iVictim) || !is_user_connected(iAttacker))
-		return HC_CONTINUE
-	
+{	
 	// Block Damage.
 	return HC_SUPERCEDE
 }
@@ -245,7 +250,7 @@ public ze_user_infected_pre(iVictim, iInfector, iDamage)
 public ze_gamemode_chosen_pre(game_id, bSkipCheck)
 {	
 	// This not round of this gamemode?
-	if (!bSkipCheck) if (random_num(1, get_pcvar_num(g_pCvar_iChance)) != 1) return ZE_STOP
+	if (!bSkipCheck) if (random_num(1, g_iChance) != 1) return ZE_STOP
 
 	// Continue starting gamemode.
 	return ZE_CONTINUE
@@ -259,28 +264,25 @@ public ze_gamemode_chosen(game_id)
 		return
 
 	// Notice mode.
-	switch (get_pcvar_num(g_pCvar_iNoticeMsg))
+	switch (g_iNoticeMsg)
 	{
 		case 1: // Normal Text (center).
 			client_print(0, print_center, "%L", LANG_PLAYER, "NOTICE_ESCAPE")
 		case 2: // HUD.
 		{
 			// Show HUD for all clients.
-			set_hudmessage(get_pcvar_num(g_pCvar_iNoticeColors[Red]), get_pcvar_num(g_pCvar_iNoticeColors[Green]), get_pcvar_num(g_pCvar_iNoticeColors[Blue]), HUD_X, HUD_Y, 1, 5.0, 5.0, 0.1, 0.1)
+			set_hudmessage(g_iNoticeColors[Red], g_iNoticeColors[Green], g_iNoticeColors[Blue], HUD_X, HUD_Y, 1, 5.0, 5.0, 0.1, 0.1)
 			show_hudmessage(0, "%L", LANG_PLAYER, "NOTICE_ESCAPE")
 		}
 		case 3: // Director HUD
 		{
-			set_dhudmessage(get_pcvar_num(g_pCvar_iNoticeColors[Red]), get_pcvar_num(g_pCvar_iNoticeColors[Green]), get_pcvar_num(g_pCvar_iNoticeColors[Blue]), HUD_X, HUD_Y, 1, 5.0, 5.0, 0.1, 0.1)
+			set_dhudmessage(g_iNoticeColors[Red], g_iNoticeColors[Green], g_iNoticeColors[Blue], HUD_X, HUD_Y, 1, 5.0, 5.0, 0.1, 0.1)
 			show_dhudmessage(0, "%L", LANG_PLAYER, "NOTICE_ESCAPE")
 		}
 	}
 
-	// Get mode type.
-	g_iRoundMode = get_pcvar_num(g_pCvar_iMode)
-
 	// Check notice sound is enabled or not?
-	if (get_pcvar_num(g_pCvar_iNoticeSound))
+	if (g_bNoticeSound)
 	{
 		new szSound[MAX_SOUND_LENGTH]
 
@@ -291,12 +293,7 @@ public ze_gamemode_chosen(game_id)
 		PlaySound(0, szSound)
 	}
 
-	// Respawn any player Zombie.
-	g_bRespawnAsZombie = (get_pcvar_num(g_pCvar_iRespawnAsZombie) > 0) ? true : false
-
-	// Check smart random choose is enabled or not.
-	new bool:bSmartRandom = get_pcvar_num(g_pCvar_iSmartRandom) ? true : false
-
+	// Local Variables.
 	new iFirstZombies[MAX_PLAYERS], iPlayers[MAX_PLAYERS], szAuthId[34], iAliveCount, iReqZombies, iZombieNum, id
 
 	// Get all alive players and save players index in array.
@@ -305,42 +302,47 @@ public ze_gamemode_chosen(game_id)
 	// Get number of required Zombies.
 	iReqZombies = RequiredZombies()
 
-	// Get health of first Zombies.
-	new Float:flFirstHealth = get_pcvar_float(g_pCvar_iFirstZombieHealth)
-
 	// Repeat finding on required Zombies.
 	while (iZombieNum < iReqZombies)
 	{
-		// Get random player.
-		id = iPlayers[random_num(0, iAliveCount)]
+		// Get random player index.
+		id = iPlayers[random_num(0, iAliveCount - 1)]
 
 		// Player is already Zombie?
-		if (ze_is_user_zombie(id))
+		if (ze_is_user_zombie_ex(id))
 			continue
 
 		// Get authid of player.
 		get_user_authid(id, szAuthId, charsmax(szAuthId))
 		
 		// Player is already infected previous round.
-		if (bSmartRandom) if (TrieKeyExists(g_tChosenPlayers, szAuthId)) continue
+		if (g_bSmartRandom) if (TrieKeyExists(g_tChosenPlayers, szAuthId)) continue
 
-		if (!g_iRoundMode)
+		// Old game mode?
+		if (!g_iMode)
 		{
 			// Freeze Zombie.
 			g_bIsZombieFrozen[id] = true
+
+			// Freeze player (No moving)
 			set_entvar(id, var_flags, (get_entvar(id, var_flags) | FL_FROZEN))
 		}
 
-		// Respawn player Zombie.
-		ze_allow_respawn_as_zombie(id)
+		// Respawn player Zombie?
+		if (g_bRespawnAsZombie)
+		{
+			// Respawn player Zombie.
+			ze_allow_respawn_as_zombie(id)
+		}
 
 		// Switch player to Zombies team (Infect him).
 		ze_set_user_zombie(id)
 
 		// Set first Zombies specific health.
-		if (flFirstHealth > 0)
+		if (g_iFirstZombieHealth > 0)
 		{
-			set_entvar(id, var_health, flFirstHealth)
+			// Set first Zombie custom health.
+			set_entvar(id, var_health, float(g_iFirstZombieHealth))
 		}
 
 		// New Zombie.
@@ -348,21 +350,16 @@ public ze_gamemode_chosen(game_id)
 	}
 
 	// Check smart random choose is enabled or not?
-	if (bSmartRandom)
+	if (g_bSmartRandom)
 	{
 		// Clear Trie first.
 		TrieClear(g_tChosenPlayers)
 
 		// Add authid of all Zombies in Trie.
-		for (id = 1; id <= MaxClients; id++)
+		for (new iNum = 0; iNum < iZombieNum; iNum++)
 		{
-			// Players not a alive?
-			if (!is_user_alive(id))
-				continue
-			
-			// Player is not Zombie?
-			if (!ze_is_user_zombie(id))
-				continue
+			// Get player index.
+			id = iFirstZombies[iNum]
 			
 			// Get authid of player.
 			get_user_authid(id, szAuthId, charsmax(szAuthId))
@@ -379,10 +376,10 @@ public ze_gamemode_chosen(game_id)
 	}
 
 	// Execute forward ze_zombie_appear_ex(const iZombies[], iZombieNum)
-	ExecuteForward(g_iForwards[FORWARD_ZOMBIE_APPEAR_EX], _/* No return value */, iFirstZombies, iZombieNum)
+	ExecuteForward(g_iForwards[FORWARD_ZOMBIE_APPEAR_EX], _/* No return value */, PrepareArray(iFirstZombies, iZombieNum), iZombieNum)
 
 	// This is working only in old gamemode!
-	if (!g_iRoundMode)
+	if (!g_iMode)
 	{
 		// Enable hook "TraceAttack" to block bullet damage.
 		EnableHookChain(g_pHookTraceAttack)
@@ -391,7 +388,7 @@ public ze_gamemode_chosen(game_id)
 	g_bBlockInfection = true // Block Infection event.
 
 	// Get release time first.
-	g_iCountdown = get_pcvar_num(g_pCvar_iReleasTime)
+	g_iCountdown = g_iReleasTime
 
 	// Release time task.
 	set_task(1.0, "delayReleaseZombie", TASK_COUNTDOWN, "", 0, "b")
@@ -411,18 +408,18 @@ public delayReleaseZombie(iTask)
 	}
 
 	// Show release time HUD.
-	switch (get_pcvar_num(g_pCvar_iReleaseHud))
+	switch (g_iReleaseHud)
 	{
 		case 0: // Text.
 			client_print(0, print_center, "%L", LANG_PLAYER, "ZOMBIE_RELEASE", g_iCountdown--)
 		case 1: // HUD
 		{
-			set_hudmessage(get_pcvar_num(g_pCvar_iReleasColors[Red]), get_pcvar_num(g_pCvar_iReleasColors[Green]), get_pcvar_num(g_pCvar_iReleasColors[Blue]), -1.0, 0.35, 0, 1.0, 1.0, 0.0, 0.0)
+			set_hudmessage(g_iReleasColors[Red], g_iReleasColors[Green], g_iReleasColors[Blue], -1.0, 0.35, 0, 1.0, 1.0, 0.0, 0.0)
 			ShowSyncHudMsg(0, g_iSyncMsgHud, "%L", LANG_PLAYER, "ZOMBIE_RELEASE", g_iCountdown--)
 		}
 		case 2: // DHUD
 		{
-			set_dhudmessage(get_pcvar_num(g_pCvar_iReleasColors[Red]), get_pcvar_num(g_pCvar_iReleasColors[Green]), get_pcvar_num(g_pCvar_iReleasColors[Blue]), -1.0, 0.35, 0, 1.0, 1.0, 0.0, 0.0)
+			set_dhudmessage(g_iReleasColors[Red], g_iReleasColors[Green], g_iReleasColors[Blue], -1.0, 0.35, 0, 1.0, 1.0, 0.0, 0.0)
 			show_dhudmessage(0, "%L", LANG_PLAYER, "ZOMBIE_RELEASE", g_iCountdown--)			
 		}
 	}
@@ -433,23 +430,46 @@ public releaseZombies()
 	/*
 	 * Old Mod, Freeze zombies and release them after seconds !
 	 */
-	if (!g_iRoundMode)
+	if (!g_iMode)
 	{
 		// Enable infection.
 		g_bBlockInfection = false
 
-		for (new id = 1; id <= MaxClients; id++)
-		{
-			// Player is not a Alive?
-			if (!is_user_alive(id))
-				continue
-			
+		// Local Variables.
+		new iPlayers[MAX_PLAYERS], iAliveCount, iNum, id
+
+		// Get index of all alive players.
+		get_players(iPlayers, iAliveCount, "ah")
+
+		// Release all Zombies.
+		for (iNum = 0; iNum <= iAliveCount; iNum++)
+		{			
+			// Get player index.
+			id = iPlayers[iNum]
+
 			// Player is a Zombie?
-			if (ze_is_user_zombie(id))
+			if (ze_is_user_zombie_ex(id))
 			{
 				// Unfreeze all Zombies.
 				g_bIsZombieFrozen[id] = false
 				set_entvar(id, var_flags, (get_entvar(id, var_flags) & ~FL_FROZEN))
+			}
+		}
+
+		// Show release time HUD.
+		switch (g_iReleaseHud)
+		{
+			case 0: // Text.
+				client_print(0, print_center, "%L", LANG_PLAYER, "ZOMBIE_RELEASED")
+			case 1: // HUD
+			{
+				set_hudmessage(g_iReleasColors[Red], g_iReleasColors[Green], g_iReleasColors[Blue], -1.0, 0.35, 1, 3.0, 3.0, 0.0, 0.0)
+				ShowSyncHudMsg(0, g_iSyncMsgHud, "%L", LANG_PLAYER, "ZOMBIE_RELEASED")
+			}
+			case 2: // DHUD
+			{
+				set_dhudmessage(g_iReleasColors[Red], g_iReleasColors[Green], g_iReleasColors[Blue], -1.0, 0.35, 1, 3.0, 3.0, 0.0, 0.0)
+				show_dhudmessage(0, "%L", LANG_PLAYER, "ZOMBIE_RELEASED")			
 			}
 		}
 
@@ -469,8 +489,6 @@ public releaseZombies()
 // Forward called when round ended.
 public ze_roundend(iWinTeam)
 {
-	g_bRespawnAsZombie = false
-
 	// All clients.
 	for (new id = 1; id <= MaxClients; id++)
 	{
@@ -486,10 +504,19 @@ public ze_roundend(iWinTeam)
 /**
  * Function of native:
  */
+public native_is_user_first_zombie(id)
+{
+	// Player not found or not Zombie?
+	if (!is_user_connected(id) || !ze_is_user_zombie_ex(id))
+		return false
+
+	return g_bIsZombieFrozen[id] // Return true or false.
+}
+
 public native_is_zombie_frozen(id)
 {
 	// Player not found or not Zombie?
-	if (!is_user_connected(id) || !ze_is_user_zombie(id))
+	if (!is_user_connected(id) || !ze_is_user_zombie_ex(id))
 	{
 		return NULLENT // Return -1
 	}
