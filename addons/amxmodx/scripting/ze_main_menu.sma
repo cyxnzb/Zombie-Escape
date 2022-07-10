@@ -8,21 +8,28 @@ public plugin_init()
 	register_plugin("[ZE] Main Menu", ZE_VERSION, AUTHORS)
 	
 	// Commands
-	register_clcmd("chooseteam", "Cmd_ChooseTeam")
-	register_clcmd("jointeam", "Cmd_ChooseTeam")
-	register_clcmd("say /ze", "Cmd_ChooseTeam")
-	register_clcmd("say_team /ze", "Cmd_ChooseTeam")
-	
+	register_clcmd("chooseteam", "clcmd_MenuMain")
+	register_clcmd("jointeam", "clcmd_MenuMain")
+	register_clcmd("say /ze", "clcmd_MenuMain")
+	register_clcmd("say_team /ze", "clcmd_MenuMain")
+	register_clcmd("say /zemenu", "clcmd_MenuMain")
+	register_clcmd("say_team /zemenu", "clcmd_MenuMain")	
+
 	// Register Menus
 	register_menu("Main Menu", KEYSMENU, "Main_Menu")
 }
 
-public Cmd_ChooseTeam(id)
+public clcmd_MenuMain(id)
 {
+	// Player disconnected?
 	if (!is_user_connected(id))
 		return PLUGIN_CONTINUE;
 	
-	if (get_member(id, m_iTeam) == TEAM_TERRORIST || get_member(id, m_iTeam) == TEAM_CT)
+	// Get team of player.
+	new TeamName:iTeam = get_member(id, m_iTeam)
+
+	// Player is Specs or unassigned?
+	if ((iTeam == TEAM_TERRORIST) || (iTeam == TEAM_CT))
 	{
 		Show_Menu_Main(id)
 		return PLUGIN_HANDLED // Kill the Choose Team Command
@@ -38,7 +45,7 @@ public Show_Menu_Main(id)
 	static szMenu[300], iLen
     
 	// Title
-	iLen = formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%L^n^n", id, "MAIN_MENU_TITLE")
+	iLen = formatex(szMenu, charsmax(szMenu), "\w%L^n^n", id, "MAIN_MENU_TITLE")
 	
 	// 1. Buy Weapons
 	if (!ze_is_auto_buy_enabled(id)) // AutoBuy not enabled - normal case
