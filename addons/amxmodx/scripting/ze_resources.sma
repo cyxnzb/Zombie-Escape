@@ -1,12 +1,6 @@
 #include <zombie_escape>
 
-// Setting File
-new const ZE_SETTING_RESOURCES[] = "zombie_escape.ini"
-
 // Defines
-#define MODEL_MAX_LENGTH 64
-#define PLAYERMODEL_MAX_LENGTH 32
-#define SOUND_MAX_LENGTH 64
 #define TASK_AMBIENCESOUND 2020
 #define TASK_REAMBIENCESOUND 5050
 #define ZOMBIE_CLAWS "zombie_knife"
@@ -159,13 +153,13 @@ public plugin_init()
 public plugin_precache()
 {	
 	// Initialize Arrays: Sounds
-	g_szReadySound = ArrayCreate(SOUND_MAX_LENGTH, 1)
-	g_szInfectSound = ArrayCreate(SOUND_MAX_LENGTH, 1)
-	g_szComingSound = ArrayCreate(SOUND_MAX_LENGTH, 1)
-	g_szPreReleaseSound = ArrayCreate(SOUND_MAX_LENGTH, 1)
-	g_szAmbianceSound = ArrayCreate(SOUND_MAX_LENGTH, 1)
-	g_szEscapeSuccessSound = ArrayCreate(SOUND_MAX_LENGTH, 1)
-	g_szEscapeFailSound = ArrayCreate(SOUND_MAX_LENGTH, 1)
+	g_szReadySound = ArrayCreate(MAX_SOUND_LENGTH, 1)
+	g_szInfectSound = ArrayCreate(MAX_SOUND_LENGTH, 1)
+	g_szComingSound = ArrayCreate(MAX_SOUND_LENGTH, 1)
+	g_szPreReleaseSound = ArrayCreate(MAX_SOUND_LENGTH, 1)
+	g_szAmbianceSound = ArrayCreate(MAX_SOUND_LENGTH, 1)
+	g_szEscapeSuccessSound = ArrayCreate(MAX_SOUND_LENGTH, 1)
+	g_szEscapeFailSound = ArrayCreate(MAX_SOUND_LENGTH, 1)
 	
 	// Load From External File: Sounds
 	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "Ready Sound", g_szReadySound)
@@ -242,10 +236,13 @@ public plugin_precache()
 		amx_save_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "Escape Fail", g_szEscapeFailSound)
 	}
 	
-	// Precache: Sounds
-	new szSound[SOUND_MAX_LENGTH]
+	new szSound[MAX_SOUND_LENGTH], iArrSize
 	
-	for (iIndex = 0; iIndex < ArraySize(g_szReadySound); iIndex++)
+	// Get number of elements in dynamic array.
+	iArrSize = ArraySize(g_szReadySound)
+
+	// Precache: Sounds
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
 		ArrayGetString(g_szReadySound, iIndex, szSound, charsmax(szSound))
 		
@@ -260,7 +257,10 @@ public plugin_precache()
 		}
 	}
 	
-	for (iIndex = 0; iIndex < ArraySize(g_szInfectSound); iIndex++)
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szInfectSound)	
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
 		ArrayGetString(g_szInfectSound, iIndex, szSound, charsmax(szSound))
 		
@@ -274,8 +274,11 @@ public plugin_precache()
 			precache_sound(szSound)
 		}
 	}
-	
-	for (iIndex = 0; iIndex < ArraySize(g_szComingSound); iIndex++)
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szComingSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
 		ArrayGetString(g_szComingSound, iIndex, szSound, charsmax(szSound))
 		
@@ -289,8 +292,11 @@ public plugin_precache()
 			precache_sound(szSound)
 		}
 	}
-	
-	for (iIndex = 0; iIndex < ArraySize(g_szPreReleaseSound); iIndex++)
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szPreReleaseSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
 		ArrayGetString(g_szPreReleaseSound, iIndex, szSound, charsmax(szSound))
 		
@@ -304,8 +310,11 @@ public plugin_precache()
 			precache_sound(szSound)
 		}
 	}
-	
-	for (iIndex = 0; iIndex < ArraySize(g_szAmbianceSound); iIndex++)
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szAmbianceSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
 		ArrayGetString(g_szAmbianceSound, iIndex, szSound, charsmax(szSound))
 		
@@ -319,8 +328,11 @@ public plugin_precache()
 			precache_sound(szSound)
 		}
 	}
-	
-	for (iIndex = 0; iIndex < ArraySize(g_szEscapeSuccessSound); iIndex++)
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szEscapeSuccessSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
 		ArrayGetString(g_szEscapeSuccessSound, iIndex, szSound, charsmax(szSound))
 		
@@ -334,8 +346,11 @@ public plugin_precache()
 			precache_sound(szSound)
 		}
 	}
-	
-	for (iIndex = 0; iIndex < ArraySize(g_szEscapeFailSound); iIndex++)
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szEscapeFailSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
 		ArrayGetString(g_szEscapeFailSound, iIndex, szSound, charsmax(szSound))
 		
@@ -361,11 +376,11 @@ public plugin_precache()
 		amx_save_setting_int(ZE_SETTING_RESOURCES, "Sound Durations", "Round Ambiance", g_iAmbianceSoundDuration)
 	
 	// Initialize Arrays: Models
-	g_szHostZombieModel = ArrayCreate(PLAYERMODEL_MAX_LENGTH, 1)
-	g_szOriginZombieModel = ArrayCreate(PLAYERMODEL_MAX_LENGTH, 1)
-	g_v_szZombieKnifeModel = ArrayCreate(MODEL_MAX_LENGTH, 1)
-	g_v_szHumanKnifeModel = ArrayCreate(MODEL_MAX_LENGTH, 1)
-	g_p_szHumanKnifeModel = ArrayCreate(MODEL_MAX_LENGTH, 1)
+	g_szHostZombieModel = ArrayCreate(MAX_NAME_LENGTH, 1)
+	g_szOriginZombieModel = ArrayCreate(MAX_NAME_LENGTH, 1)
+	g_v_szZombieKnifeModel = ArrayCreate(MAX_MODEL_LENGTH, 1)
+	g_v_szHumanKnifeModel = ArrayCreate(MAX_MODEL_LENGTH, 1)
+	g_p_szHumanKnifeModel = ArrayCreate(MAX_MODEL_LENGTH, 1)
 	
 	// Load From External File: Models
 	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Player Models", "HOST ZOMBIE", g_szHostZombieModel)
@@ -421,38 +436,53 @@ public plugin_precache()
 	}
 	
 	// Precache: Models
-	new szPlayerModel[PLAYERMODEL_MAX_LENGTH], szModel[MODEL_MAX_LENGTH], szModelPath[128]
+	new szPlayerModel[MAX_NAME_LENGTH], szModelPath[128]
 	
-	for (iIndex = 0; iIndex < ArraySize(g_szHostZombieModel); iIndex++)
+	// Get number of models in dynamic array.
+	iArrSize = ArraySize(g_szHostZombieModel)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
 		ArrayGetString(g_szHostZombieModel, iIndex, szPlayerModel, charsmax(szPlayerModel))
 		formatex(szModelPath, charsmax(szModelPath), "models/player/%s/%s.mdl", szPlayerModel, szPlayerModel)
 		precache_model(szModelPath)
 	}
-	
-	for (iIndex = 0; iIndex < ArraySize(g_szOriginZombieModel); iIndex++)
+
+	// Get number of models in dynamic array.
+	iArrSize = ArraySize(g_szOriginZombieModel)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
 		ArrayGetString(g_szOriginZombieModel, iIndex, szPlayerModel, charsmax(szPlayerModel))
 		formatex(szModelPath, charsmax(szModelPath), "models/player/%s/%s.mdl", szPlayerModel, szPlayerModel)
 		precache_model(szModelPath)
 	}
-	
-	for (iIndex = 0; iIndex < ArraySize(g_v_szZombieKnifeModel); iIndex++)
+
+	// Get number of models in dynamic array.
+	iArrSize = ArraySize(g_v_szZombieKnifeModel)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
-		ArrayGetString(g_v_szZombieKnifeModel, iIndex, szModel, charsmax(szModel))
-		precache_model(szModel)
+		ArrayGetString(g_v_szZombieKnifeModel, iIndex, szModelPath, charsmax(szModelPath))
+		precache_model(szModelPath)
 	}
-	
-	for (iIndex = 0; iIndex < ArraySize(g_v_szHumanKnifeModel); iIndex++)
+
+	// Get number of models in dynamic array.
+	iArrSize = ArraySize(g_v_szHumanKnifeModel)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
-		ArrayGetString(g_v_szHumanKnifeModel, iIndex, szModel, charsmax(szModel))
-		precache_model(szModel)
+		ArrayGetString(g_v_szHumanKnifeModel, iIndex, szModelPath, charsmax(szModelPath))
+		precache_model(szModelPath)
 	}
-	
-	for (iIndex = 0; iIndex < ArraySize(g_p_szHumanKnifeModel); iIndex++)
+
+	// Get number of models in dynamic array.
+	iArrSize = ArraySize(g_p_szHumanKnifeModel)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
-		ArrayGetString(g_p_szHumanKnifeModel, iIndex, szModel, charsmax(szModel))
-		precache_model(szModel)
+		ArrayGetString(g_p_szHumanKnifeModel, iIndex, szModelPath, charsmax(szModelPath))
+		precache_model(szModelPath)
 	}
 	
 	// Precache zombie claws
@@ -471,7 +501,7 @@ public ze_game_started()
 	StopSound()
 	
 	// Play Ready Sound For All Players
-	new szSound[SOUND_MAX_LENGTH]
+	new szSound[MAX_SOUND_LENGTH]
 	ArrayGetString(g_szReadySound, random_num(0, ArraySize(g_szReadySound) - 1), szSound, charsmax(szSound))
 	
 	for(new id = 1; id <= g_iMaxPlayers; id++)
@@ -489,7 +519,7 @@ public ze_game_started()
 public ze_user_infected(iVictim, iInfector)
 {	
 	// Emit Sound For infection (Sound Source is The zombie Body)
-	new szSound[SOUND_MAX_LENGTH]
+	new szSound[MAX_SOUND_LENGTH]
 	ArrayGetString(g_szInfectSound, random_num(0, ArraySize(g_szInfectSound) - 1), szSound, charsmax(szSound))
 	emit_sound(iVictim, CHAN_BODY, szSound, 1.0, ATTN_NORM, 0, PITCH_NORM)
 	
@@ -498,7 +528,7 @@ public ze_user_infected(iVictim, iInfector)
 	PlaySound(0, szSound)
 	
 	// Set Zombie Models
-	new szPlayerModel[PLAYERMODEL_MAX_LENGTH], szModel[MODEL_MAX_LENGTH]
+	new szPlayerModel[MAX_NAME_LENGTH], szModel[MAX_MODEL_LENGTH]
 	
 	// Random Model Set
 	switch(random_num(0, 130))
@@ -535,7 +565,7 @@ public ZombieAppear()
 	StopSound()
 	
 	// Play Pre-Release Sound For All Players
-	new szSound[SOUND_MAX_LENGTH]
+	new szSound[MAX_SOUND_LENGTH]
 	ArrayGetString(g_szPreReleaseSound, random_num(0, ArraySize(g_szPreReleaseSound) - 1), szSound, charsmax(szSound))
 	
 	for(new id = 1; id <= g_iMaxPlayers; id++)
@@ -561,7 +591,7 @@ public AmbianceSound()
 	g_bInReady = false
 	
 	// Play The Ambiance Sound For All Players
-	new szSound[SOUND_MAX_LENGTH]
+	new szSound[MAX_SOUND_LENGTH]
 	ArrayGetString(g_szAmbianceSound, random_num(0, ArraySize(g_szAmbianceSound) - 1), szSound, charsmax(szSound))
 	
 	for(new id = 1; id <= g_iMaxPlayers; id++)
@@ -579,7 +609,7 @@ public AmbianceSound()
 public RePlayAmbianceSound()
 {
 	// Play The Ambiance Sound For All Players
-	new szSound[SOUND_MAX_LENGTH]
+	new szSound[MAX_SOUND_LENGTH]
 	ArrayGetString(g_szAmbianceSound, random_num(0, ArraySize(g_szAmbianceSound) - 1), szSound, charsmax(szSound))
 	
 	for(new id = 1; id <= g_iMaxPlayers; id++)
@@ -600,7 +630,7 @@ public ze_user_humanized(id)
 	rg_set_user_model(id, szHumanModels[random_num(0, charsmax(szHumanModels))], true)
 		
 	// Rest Player Knife model
-	new szModel[MODEL_MAX_LENGTH]
+	new szModel[MAX_MODEL_LENGTH]
 	ArrayGetString(g_v_szHumanKnifeModel, random_num(0, ArraySize(g_v_szHumanKnifeModel) - 1), szModel, charsmax(szModel))
 	cs_set_player_view_model(id, CSW_KNIFE, szModel)
 	ArrayGetString(g_p_szHumanKnifeModel, random_num(0, ArraySize(g_p_szHumanKnifeModel) - 1), szModel, charsmax(szModel))
@@ -616,7 +646,7 @@ public ze_roundend(WinTeam)
 	remove_task(TASK_REAMBIENCESOUND)
 	StopSound()
 	
-	new szSound[SOUND_MAX_LENGTH]
+	new szSound[MAX_SOUND_LENGTH]
 	
 	switch (WinTeam)
 	{
@@ -690,7 +720,7 @@ public native_ze_set_starting_sounds(id, bool:bSet)
 			// This means player, still in ready so play ready sound
 			if (g_bInReadyOnly == true)
 			{
-				new szSound[SOUND_MAX_LENGTH]
+				new szSound[MAX_SOUND_LENGTH]
 				ArrayGetString(g_szReadySound, random_num(0, ArraySize(g_szReadySound) - 1), szSound, charsmax(szSound))
 				
 				PlaySound(id, szSound)
@@ -699,7 +729,7 @@ public native_ze_set_starting_sounds(id, bool:bSet)
 			// This will play the pre-release sound
 			if (g_bInReady == true && !g_bInReadyOnly)
 			{
-				new szSound[SOUND_MAX_LENGTH]
+				new szSound[MAX_SOUND_LENGTH]
 				ArrayGetString(g_szPreReleaseSound, random_num(0, ArraySize(g_szPreReleaseSound) - 1), szSound, charsmax(szSound))
 				
 				PlaySound(id, szSound)
@@ -738,7 +768,7 @@ public native_ze_set_ambiance_sounds(id, bool:bSet)
 			// If player not in ready, then enable sound instantly
 			if (!g_bInReady)
 			{
-				new szSound[SOUND_MAX_LENGTH]
+				new szSound[MAX_SOUND_LENGTH]
 				ArrayGetString(g_szAmbianceSound, random_num(0, ArraySize(g_szAmbianceSound) - 1), szSound, charsmax(szSound))
 				
 				PlaySound(id, szSound)
