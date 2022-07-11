@@ -57,7 +57,6 @@ new g_iRoundTime,
 	bool:g_bHSpeedUsed[33], 
 	bool:g_bZSpeedUsed[33],
 	bool:g_bIsGravityUsed[33],
-	bool:g_bEnteredNotChoosed[33],
 	bool:g_bRespawnAsZombie[33],
 	Float:g_flReferenceTime,
 	Float:g_flZombieSpeed,
@@ -107,7 +106,6 @@ public plugin_init()
 	RegisterHookChain(RG_RoundEnd, "Event_RoundEnd_Pre", 0)
 	RegisterHookChain(RG_CBasePlayer_ResetMaxSpeed, "Fw_RestMaxSpeed_Post", 1)
 	RegisterHookChain(RG_HandleMenu_ChooseTeam, "Fw_HandleMenu_ChooseTeam_Post", 1)
-	RegisterHookChain(RG_HandleMenu_ChooseAppearance, "Fw_HandleMenu_ChoosedAppearance_Post", 1)
 	
 	// Events
 	register_event("HLTV", "New_Round", "a", "1=0", "2=0")
@@ -186,8 +184,11 @@ public fw_CvarMaxSpeed(pCvar, const szOldVal[], const szNewVal[]) {
 
 // Hook called when change the value in ze_required_players.
 public fw_CVarReqPlayers(pCvar, const szOldVal[], const szNewVal[]) {
-	// Replace value in sv_maxspeed.
-	set_task(0.1, "Check_AllPlayersNumber")	
+	// Game not started yet?
+	if (g_bGameStarted)
+		set_task(0.1, "Check_AlivePlayers")
+	else // Game already started?
+		set_task(0.1, "Check_AllPlayersNumber")
 }
 
 public plugin_cfg()
@@ -561,38 +562,16 @@ public client_putinserver(id)
 	set_task(1.0, "Check_AllPlayersNumber")
 }
 
-// Hook called after display Teams Menu for player.
-public Fw_HandleMenu_ChoosedAppearance_Post(const id, const slot)
-{
-	g_bEnteredNotChoosed[id] = false
-}
-
 // Hook called after player choose team from Teams Menu.
 public Fw_HandleMenu_ChooseTeam_Post(id, MenuChooseTeam:iSlot)
 {
-	// Player not found?
+	// Player disconnected?
 	if (!is_user_connected(id))
 		return // Prevent execute rest of codes.
 
-	// Check team chosen is Terrorists team?
-	if (iSlot == MenuChoose_T)
-	{
-		// Player has chosen the team.
-		g_bEnteredNotChoosed[id] = true
-
-		// Switch player to CTs team.
-		rg_set_user_team(id, TEAM_CT)
-	}
-	
-	// Check player has chosen random team?
-	if (iSlot == MenuChoose_AutoSelect)
-	{
-		// Player has chosen the team.
-		g_bEnteredNotChoosed[id] = true
-
-		// Switch player to CTs team.
-		rg_set_user_team(id, TEAM_CT)
-	}
+	// Check team chosen is Terrorists team or Auto Select?
+	if ((iSlot == MenuChoose_T) || (iSlot == MenuChoose_AutoSelect))
+		rg_set_user_team(id, TEAM_CT) // Switch player to CTs team.
 	
 	// Add Delay and Check Conditions To start the Game (Delay needed)
 	set_task(1.0, "Check_AllPlayersNumber")
@@ -605,7 +584,7 @@ public Check_AllPlayersNumber()
 		return
 	
 	// Required players are exists?
-	if (get_playersnum_ex(GetPlayers_ExcludeDead) >= g_iRequiredPlayers)
+	if (get_playersnum_ex() >= g_iRequiredPlayers)
 	{
 		// Start game.
 		g_bGameStarted = true
