@@ -62,7 +62,7 @@ new const szOriginZombieModel[][] =
 	"origin_zombie"
 }
 
-new const szHumanModels[][] = // These models not prechaced as it's default in cs
+new const szHumanModels[][] =
 {
 	"arctic",
 	"gign",
@@ -103,7 +103,8 @@ new Array:g_szReadySound,
 	Array:g_szEscapeFailSound
 
 // Dynamic Arrays: Models
-new Array:g_szHostZombieModel,
+new Array:g_szHumanModels,
+	Array:g_szHostZombieModel,
 	Array:g_szOriginZombieModel,
 	Array:g_v_szZombieKnifeModel,
 	Array:g_v_szHumanKnifeModel, 
@@ -376,6 +377,7 @@ public plugin_precache()
 		amx_save_setting_int(ZE_SETTING_RESOURCES, "Sound Durations", "Round Ambiance", g_iAmbianceSoundDuration)
 	
 	// Initialize Arrays: Models
+	g_szHumanModels = ArrayCreate(MAX_NAME_LENGTH, 1)
 	g_szHostZombieModel = ArrayCreate(MAX_NAME_LENGTH, 1)
 	g_szOriginZombieModel = ArrayCreate(MAX_NAME_LENGTH, 1)
 	g_v_szZombieKnifeModel = ArrayCreate(MAX_MODEL_LENGTH, 1)
@@ -383,13 +385,23 @@ public plugin_precache()
 	g_p_szHumanKnifeModel = ArrayCreate(MAX_MODEL_LENGTH, 1)
 	
 	// Load From External File: Models
+	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Player Models", "HUMANS", g_szHumanModels)
 	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Player Models", "HOST ZOMBIE", g_szHostZombieModel)
 	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Player Models", "ORIGIN ZOMBIE", g_szOriginZombieModel)
 	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Weapon Models", "V_KNIFE ZOMBIE", g_v_szZombieKnifeModel)
 	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Weapon Models", "V_KNIFE HUMAN", g_v_szHumanKnifeModel)
 	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Weapon Models", "P_KNIFE HUMAN", g_p_szHumanKnifeModel)
 	
-	// Load our Default Values: Models
+	// Load our Default Values: Models	
+	if (ArraySize(g_szHumanModels) == 0)
+	{
+		for (iIndex = 0; iIndex < sizeof szHumanModels; iIndex++)
+			ArrayPushString(g_szHumanModels, szHumanModels[iIndex])
+		
+		// Save to externel file.
+		amx_save_setting_string_arr(ZE_SETTING_RESOURCES, "Player Models", "HUMANS", g_szHumanModels)
+	}
+
 	if(ArraySize(g_szHostZombieModel) == 0)
 	{
 		for(iIndex = 0; iIndex < sizeof szHostZombieModel; iIndex++)
@@ -528,20 +540,20 @@ public ze_user_infected(iVictim, iInfector)
 	PlaySound(0, szSound)
 	
 	// Set Zombie Models
-	new szPlayerModel[MAX_NAME_LENGTH], szModel[MAX_MODEL_LENGTH]
+	new szModel[MAX_MODEL_LENGTH]
 	
 	// Random Model Set
 	switch(random_num(0, 130))
 	{
 		case 0..30, 71..100:
 		{
-			ArrayGetString(g_szHostZombieModel, random_num(0, ArraySize(g_szHostZombieModel) - 1), szPlayerModel, charsmax(szPlayerModel))
-			rg_set_user_model(iVictim, szPlayerModel, true) // This native Faster 100000000000 times than one in fun module
+			ArrayGetString(g_szHostZombieModel, random_num(0, ArraySize(g_szHostZombieModel) - 1), szModel, charsmax(szModel))
+			rg_set_user_model(iVictim, szModel, true) // This native Faster 100000000000 times than one in fun module
 		}
 		case 31..70, 101..130:
 		{
-			ArrayGetString(g_szOriginZombieModel, random_num(0, ArraySize(g_szOriginZombieModel) - 1), szPlayerModel, charsmax(szPlayerModel))
-			rg_set_user_model(iVictim, szPlayerModel, true)
+			ArrayGetString(g_szOriginZombieModel, random_num(0, ArraySize(g_szOriginZombieModel) - 1), szModel, charsmax(szModel))
+			rg_set_user_model(iVictim, szModel, true)
 		}
 	}
 	
@@ -621,16 +633,19 @@ public RePlayAmbianceSound()
 	}
 }
 
+// Forward called after player humanized.
 public ze_user_humanized(id)
 {
-	if (ze_is_user_zombie(id) || !is_user_alive(id))
-		return
-	
-	// Rest Player Model (Model Randomly)
-	rg_set_user_model(id, szHumanModels[random_num(0, charsmax(szHumanModels))], true)
+	// Local Variable.
+	new szModel[MAX_MODEL_LENGTH]
+
+	// Get random model from dynamic array.
+	ArrayGetString(g_szHumanModels, random_num(0, ArraySize(g_szHumanModels) - 1), szModel, charsmax(szModel))
+
+	// Set player Model.
+	rg_set_user_model(id, szModel, true)
 		
 	// Rest Player Knife model
-	new szModel[MAX_MODEL_LENGTH]
 	ArrayGetString(g_v_szHumanKnifeModel, random_num(0, ArraySize(g_v_szHumanKnifeModel) - 1), szModel, charsmax(szModel))
 	cs_set_player_view_model(id, CSW_KNIFE, szModel)
 	ArrayGetString(g_p_szHumanKnifeModel, random_num(0, ArraySize(g_p_szHumanKnifeModel) - 1), szModel, charsmax(szModel))
