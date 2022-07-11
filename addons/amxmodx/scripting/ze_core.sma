@@ -968,11 +968,9 @@ public native_ze_set_user_zombie_ex(id, iInfector)
 		return false;
 	}
 
-	if (!is_user_connected(iInfector))
-	{
-		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", iInfector)
+	// Infector not found?
+	if (!iInfector || !is_user_connected(iInfector))
 		return false;
-	}	
 	
 	Set_User_Zombie(id, iInfector, 0.0)
 	return true;
