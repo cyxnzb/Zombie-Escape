@@ -47,6 +47,7 @@ new g_iRoundTime,
 	g_iZombieHealth,
 	g_iZombieGravity,
 	g_iRoundTimeLeft,
+	g_iPainShockFree,
 	g_iHSpeedFactor[33],
 	g_iZSpeedSet[33],
 	g_iUserGravity[33],
@@ -153,6 +154,7 @@ public plugin_init()
 	bind_pcvar_float(create_cvar("ze_round_end_delay", "5.0"), g_flRoundEndDelay)
 	bind_pcvar_num(create_cvar("ze_winmessage_type", "0"), g_iWinMessageType)
 	bind_pcvar_num(create_cvar("ze_deathmsg_skull", "0"), g_bSkullGreenColor)
+	bind_pcvar_num(create_cvar("ze_painshockfree", "1"), g_iPainShockFree)
 
 	// Hooks CVars.
 	hook_cvar_change(pCvar_iFreezeTime, "fw_CVarFreezeTime")
@@ -413,16 +415,19 @@ public Fw_TakeDamage_Post(iVictim, iInflictor, iAttacker, Float:flDamage, bitsDa
 {
 	// Not Vaild Victim or Attacker so skip the event (Important to block out bounds errors)
 	if (!is_user_connected(iVictim) || !is_user_connected(iAttacker))
-		return HC_CONTINUE
+		return
 	
-	// Set Knockback here, So if we blocked damage in TraceAttack event player won't get knockback (Fix For Madness)
-	if (g_bIsZombie[iVictim] && !g_bIsZombie[iAttacker])
+	switch (g_iPainShockFree)
 	{
-		// Pain Shock Free!
-		set_member(iVictim, m_flVelocityModifier, 1.0)
+		case 1: // Zombies only?
+			// Player is Zombie?
+			if (g_bIsZombie[iVictim]) set_member(iVictim, m_flVelocityModifier, 1.0)
+		case 2: // Humans only?
+			// Player is Human?
+			if (!g_bIsZombie[iVictim]) set_member(iVictim, m_flVelocityModifier, 1.0)
+		case 3: // Both?
+			set_member(iVictim, m_flVelocityModifier, 1.0)
 	}
-	
-	return HC_CONTINUE
 }
 
 // Hook called after round over.
