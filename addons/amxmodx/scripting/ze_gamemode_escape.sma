@@ -201,6 +201,10 @@ public ze_game_started_pre()
 // Forward called when player spawn.
 public ze_player_spawn_post(id)
 {
+	// There are no humans?
+	if (get_member_game(m_iNumCT) <= 1)
+		return
+
 	// Respawn player Zombie?
 	if (g_bRespawnAsZombie)
 	{
