@@ -111,8 +111,7 @@ new Array:g_szHumanModels,
 	Array:g_p_szHumanKnifeModel
 
 // Variables
-new g_iMaxPlayers, 
-	g_pCvarReleaseTime,
+new g_iReleaseTime,
 	g_iMsgIndexWeaponList,
 	bool:g_bAmbianceSound[33], 
 	bool:g_bReadySound[33], 
@@ -133,12 +132,9 @@ public plugin_init()
 	
 	// Hams
 	RegisterHam(Ham_Item_AddToPlayer, "weapon_knife", "Fw_AddItemToPlayer_Post", 1);
-	
-	// Max Players
-	g_iMaxPlayers = get_member_game(m_nMaxPlayers)
-	
-	// Pointers
-	g_pCvarReleaseTime = get_cvar_pointer("ze_release_time")
+		
+	// CVars.
+	bind_pcvar_num(get_cvar_pointer("ze_release_time"), g_iReleaseTime)
 
 	// Hook zombie knife
 	register_clcmd(ZOMBIE_CLAWS, "Hook_ZombieKnifeSelection")
@@ -147,8 +143,8 @@ public plugin_init()
 	g_iMsgIndexWeaponList = get_user_msgid("WeaponList")
 	
 	// Default ambiance and ready sounds are enabled
-	arrayset(g_bAmbianceSound, true, 32)
-	arrayset(g_bReadySound, true, 32)
+	arrayset(g_bAmbianceSound[1], true, 32)
+	arrayset(g_bReadySound[1], true, 32)
 }
 
 public plugin_precache()
@@ -592,7 +588,7 @@ public ZombieAppear()
 public ze_zombie_release()
 {
 	// Add Delay to make sure Pre-Release Sound Finished
-	set_task(float((g_iPreReleaseSoundDuration) - (get_pcvar_num(g_pCvarReleaseTime) - 3)), "AmbianceSound", TASK_AMBIENCESOUND, _, _, "a", 1)
+	set_task(float((g_iPreReleaseSoundDuration) - (g_iReleaseTime - 3)), "AmbianceSound", TASK_AMBIENCESOUND, _, _, "a", 1)
 }
 
 public AmbianceSound()
@@ -606,7 +602,7 @@ public AmbianceSound()
 	new szSound[MAX_SOUND_LENGTH]
 	ArrayGetString(g_szAmbianceSound, random_num(0, ArraySize(g_szAmbianceSound) - 1), szSound, charsmax(szSound))
 	
-	for(new id = 1; id <= g_iMaxPlayers; id++)
+	for(new id = 1; id <= MaxClients; id++)
 	{
 		if(!is_user_connected(id) || !g_bAmbianceSound[id])
 			continue
@@ -624,7 +620,7 @@ public RePlayAmbianceSound()
 	new szSound[MAX_SOUND_LENGTH]
 	ArrayGetString(g_szAmbianceSound, random_num(0, ArraySize(g_szAmbianceSound) - 1), szSound, charsmax(szSound))
 	
-	for(new id = 1; id <= g_iMaxPlayers; id++)
+	for(new id = 1; id <= MaxClients; id++)
 	{
 		if(!is_user_connected(id) || !g_bAmbianceSound[id])
 			continue
@@ -681,7 +677,7 @@ public ze_roundend(WinTeam)
 
 public Fw_AddItemToPlayer_Post(iItem, id)
 {
-	if (pev_valid(iItem) && is_user_alive(id) && ze_is_user_zombie(id))
+	if (is_entity(iItem) && is_user_alive(id) && ze_is_user_zombie_ex(id))
 	{
 		// Show zombie claws when add knife to zombies
 		WeaponList(id, 1)
@@ -690,7 +686,7 @@ public Fw_AddItemToPlayer_Post(iItem, id)
 
 public Hook_ZombieKnifeSelection(id)
 { 
-	if (!is_user_alive(id) || !ze_is_user_zombie(id))
+	if (!is_user_alive(id) || !ze_is_user_zombie_ex(id))
 		return PLUGIN_HANDLED
 
 	engclient_cmd(id, "weapon_knife")
@@ -700,9 +696,6 @@ public Hook_ZombieKnifeSelection(id)
 
 WeaponList(id, iMode = 0)
 {
-	if (!is_user_alive(id))
-		return
-	
 	message_begin(MSG_ONE, g_iMsgIndexWeaponList, {0, 0, 0}, id)
 	write_string(iMode ? ZOMBIE_CLAWS : "weapon_knife")
 	write_byte(-1)
