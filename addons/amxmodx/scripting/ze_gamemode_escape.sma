@@ -42,6 +42,7 @@ new g_iNoticeColors[Colors]
 new g_iReleasColors[Colors]
 new bool:g_bNoticeSound
 new bool:g_bSmartRandom
+new bool:g_bReleaseTime
 new bool:g_bBlockInfection
 new bool:g_bRespawnAsZombie
 new bool:g_bIsFirstZombie[MAX_PLAYERS+1]
@@ -180,6 +181,24 @@ public client_putinserver(id)
 		// Print text in center.
 		client_print(0, print_center, "%L", LANG_PLAYER, "ESCAPE_DRAW")
 	}
+}
+
+// Forward called before freeze player using FrostNade.
+public ze_frost_pre(id)
+{
+	// Zombie in frozen time?
+	if (g_bReleaseTime)
+		return ZE_STOP // Prevent freeze Zombie.
+	return ZE_CONTINUE // Continue freeze Zombie.
+}
+
+// Forward called before burn player using FireNade.
+public ze_fire_pre(id)
+{
+	// Zombie in frozen time?
+	if (g_bReleaseTime)
+		return ZE_STOP // Prevent burn Zombie.
+	return ZE_CONTINUE // Continue burn Zombie.
 }
 
 // Forward called every New Round (Is important to declare it in pre-forward).
@@ -385,6 +404,9 @@ public ze_gamemode_chosen(game_id)
 	// This is working only in old gamemode!
 	if (!g_iMode)
 	{
+		// Zombie has chosen?
+		g_bReleaseTime = true
+
 		// Enable hook "TraceAttack" to block bullet damage.
 		EnableHookChain(g_pHookTraceAttack)
 	}
@@ -476,6 +498,9 @@ public releaseZombies()
 				show_dhudmessage(0, "%L", LANG_PLAYER, "ZOMBIE_RELEASED")			
 			}
 		}
+
+		// Release Zombie.
+		g_bReleaseTime = false
 
 		// Disable hook "TraceAttack" to allow bullet damage.
 		DisableHookChain(g_pHookTraceAttack)
