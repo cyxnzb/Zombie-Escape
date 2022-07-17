@@ -165,47 +165,51 @@ public show_CountDown(iTask)
 public chooseGame()
 {
 	// It's a first round?
-	if ((ze_get_round_number() > 1) && !g_bFirstDefaultGame)
+	if ((ze_get_round_number() == 1) && g_bFirstDefaultGame)
 	{
-		// Local Variables.
-		new szFileName[64], iTime, iGame
-
-		// Repeat some times!
-		while (iTime < GAME_CHANCE)
-		{
-			// Try start gamemode.
-			for (iGame = 0; iGame < g_iGameCount; iGame++)
-			{
-				// Get filename of gamemode from dynamic array.
-				ArrayGetString(g_aGameFile, iGame, szFileName, charsmax(szFileName))
-
-				// Unpause plugin first
-				unpause("c", szFileName)
-
-				// Execute forward ze_gamemode_chosen_pre(game_id) and get return value.
-				ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN_PRE], g_iFwResult, iGame, false)
-
-				// Check return value is 1 or above?
-				if (g_iFwResult >= ZE_STOP)
-				{
-					// Re-pause plugin.
-					pause("ac", szFileName)
-					continue // Skip this gamemode.
-				}
-				
-				// Execute forward ze_gamemode_chosen(game_id).
-				g_iGameCurrent = iGame
-				ze_pGameMode = true // Has game started.
-				ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* No return value */, iGame)
-				return // Gamemode has started.
-			}
-
-			// Next time.
-			iTime++
-		}
+		// Start default gamemode.
+		chooseDefault()
+		return // Prevent execute rest of codes.
 	}
 
-	// Start default gamemode.
+	// Local Variables.
+	new szFileName[64], iTime, iGame
+
+	// Repeat some times!
+	while (iTime < GAME_CHANCE)
+	{
+		// Try start gamemode.
+		for (iGame = 0; iGame < g_iGameCount; iGame++)
+		{
+			// Get filename of gamemode from dynamic array.
+			ArrayGetString(g_aGameFile, iGame, szFileName, charsmax(szFileName))
+
+			// Unpause plugin first
+			unpause("c", szFileName)
+
+			// Execute forward ze_gamemode_chosen_pre(game_id) and get return value.
+			ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN_PRE], g_iFwResult, iGame, false)
+
+			// Check return value is 1 or above?
+			if (g_iFwResult >= ZE_STOP)
+			{
+				// Re-pause plugin.
+				pause("ac", szFileName)
+				continue // Skip this gamemode.
+			}
+			
+			// Execute forward ze_gamemode_chosen(game_id).
+			g_iGameCurrent = iGame
+			ze_pGameMode = true // Has game started.
+			ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* No return value */, iGame)
+			return // Gamemode has started.
+		}
+
+		// Next time.
+		iTime++
+	}
+
+	// No gamemode chosen, Start default gamemode.
 	chooseDefault()
 }
 
@@ -216,6 +220,9 @@ public chooseDefault()
 	{
 		// Print message on server console.
 		server_print("[ZE] Default gamemode not found !")
+
+		// Print message on server console for all players.
+		console_print(0, "[ZE] Default gamemode not found !")
 	}
 	else // Start default gamemode.
 	{
