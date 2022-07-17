@@ -199,9 +199,19 @@ public clcmd_TurnNightvision(id)
 	return PLUGIN_HANDLED // Prevent execute property of command on game.
 }
 
+// Forward called after player spawn.
+public ze_player_spawn_post(id)
+{
+	// Remove task.
+	remove_task(id+TASK_ID)	
+}
+
 // Forward called when player disconnected from server.
 public client_disconnected(id)
 {
+	// Remove task.
+	remove_task(id+TASK_ID)
+
 	// Reset Variables.
 	g_bCustomNvg[id] = false
 	g_bCustomNvgAuto[id] = false
@@ -336,7 +346,7 @@ public show_Specs_Nvg(id)
 	static iSpec
 
 	// Get a player who is watching a spectator?
-	iSpec = get_entvar(id, var_iuser3)
+	iSpec = get_entvar(id, var_iuser2)
 
 	// Target is not a alive?
 	if (!is_user_alive(iSpec))
@@ -385,6 +395,14 @@ public show_Specs_Nvg(id)
 				set_nightvision(id, g_iHumanNvgColors[Red], g_iHumanNvgColors[Green], g_iHumanNvgColors[Blue], g_iHumanNvgDensity)
 			}
 		}
+	}
+	else
+	{
+		// Turn off nvg for spectator.
+		g_bNvgEnabled[id] = false
+
+		// Remove spectator nightvision.
+		native_ze_reset_user_nvg(id)
 	}
 }
 
