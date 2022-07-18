@@ -206,6 +206,19 @@ public ze_player_spawn_post(id)
 	remove_task(id+TASK_ID)	
 }
 
+// Forward called when player join the server.
+public client_putinserver(id)
+{
+	// Delay before set player Map lighting.
+	set_task(0.1, "changeLighting", id)
+}
+
+public changeLighting(id)
+{
+	// Change Map lighting for player.
+	set_lightstyle(id, g_szCurLighting)
+}
+
 // Forward called when player disconnected from server.
 public client_disconnected(id)
 {
