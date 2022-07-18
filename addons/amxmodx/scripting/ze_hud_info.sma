@@ -2,7 +2,7 @@
 
 // Defines
 #define TASK_SHOWHUD 100
-#define ID_SHOWHUD (taskid - TASK_SHOWHUD)
+#define ID_SHOWHUD (taskid-TASK_SHOWHUD)
 
 // Constants Change X,Y If you need (HUD & DHud)
 const Float:HUD_SPECT_X = 0.01
@@ -19,75 +19,89 @@ enum
 }
 
 // Variables
-new g_iMsgSync, 
-	g_pCvarRankEnabled
-	
-// Cvars
-new g_pCvarHudInfoMode, 
-	g_pCvarHudInfoComma,
-	g_pCvarZombieInfoColors[3],
-	g_pCvarHumanInfoColors[3],
-	g_pCvarSpecInfoColors[3]
+new g_iMsgSync
+new g_iRankMode
+new g_iHudInfoMode
+new g_iZombieInfoColors[3]
+new g_iHumanInfoColors[3]
+new g_iSpecInfoColors[3]
+new bool:g_bHudInfoCommas
 
+// Forward allows register new natives.
 public plugin_natives()
 {
 	register_native("ze_show_user_hud_info", "native_show_user_hud_info", 1)
 	register_native("ze_hide_user_hud_info", "native_hide_user_hud_info", 1)
 }
 
+// Forward called after server activation.
 public plugin_init()
 {
+	// Load plugin.
 	register_plugin("[ZE] Hud Information", ZE_VERSION, AUTHORS)
+		
+	// CVars
+	new pCvarHudInfoMode = create_cvar("ze_hud_info_mode", "1")
 	
-	// Messages
+	bind_pcvar_num(pCvarHudInfoMode, g_iHudInfoMode)
+	bind_pcvar_num(create_cvar("ze_hud_info_commas", "1"), g_bHudInfoCommas)
+	bind_pcvar_num(create_cvar("ze_hud_info_zombie_red", "255"), g_iZombieInfoColors[Red])
+	bind_pcvar_num(create_cvar("ze_hud_info_zombie_green", "20"), g_iZombieInfoColors[Green])
+	bind_pcvar_num(create_cvar("ze_hud_info_zombie_blue", "20"), g_iZombieInfoColors[Blue])
+	bind_pcvar_num(create_cvar("ze_hud_info_human_red", "20"), g_iHumanInfoColors[Red])
+	bind_pcvar_num(create_cvar("ze_hud_info_human_green", "20"), g_iHumanInfoColors[Green])
+	bind_pcvar_num(create_cvar("ze_hud_info_human_blue", "255"), g_iHumanInfoColors[Blue])
+	bind_pcvar_num(create_cvar("ze_hud_info_spec_red", "100"), g_iSpecInfoColors[Red])
+	bind_pcvar_num(create_cvar("ze_hud_info_spec_green", "100"), g_iSpecInfoColors[Green])
+	bind_pcvar_num(create_cvar("ze_hud_info_spec_blue", "100"), g_iSpecInfoColors[Blue])
+	bind_pcvar_num(get_cvar_pointer("ze_speed_rank_mode"), g_iRankMode)
+
+	hook_cvar_change(pCvarHudInfoMode, "fw_CVar_HudInfoModeChanged")
+
+	// Static Values.
 	g_iMsgSync = CreateHudSyncObj()
-	
-	//Cvars
-	g_pCvarHudInfoMode = register_cvar("ze_hud_info_mode", "1")
-	g_pCvarHudInfoComma = register_cvar("ze_hud_info_commas", "1")
-	g_pCvarZombieInfoColors[Red] = register_cvar("ze_hud_info_zombie_red", "255")
-	g_pCvarZombieInfoColors[Green] = register_cvar("ze_hud_info_zombie_green", "20")
-	g_pCvarZombieInfoColors[Blue] = register_cvar("ze_hud_info_zombie_blue", "20")
-	g_pCvarHumanInfoColors[Red] = register_cvar("ze_hud_info_human_red", "20")
-	g_pCvarHumanInfoColors[Green] = register_cvar("ze_hud_info_human_green", "20")
-	g_pCvarHumanInfoColors[Blue] = register_cvar("ze_hud_info_human_blue", "255")
-	g_pCvarSpecInfoColors[Red] = register_cvar("ze_hud_info_spec_red", "100")
-	g_pCvarSpecInfoColors[Green] = register_cvar("ze_hud_info_spec_green", "100")
-	g_pCvarSpecInfoColors[Blue] = register_cvar("ze_hud_info_spec_blue", "100")
-	
-	// Pointer
-	g_pCvarRankEnabled = get_cvar_pointer("ze_speed_rank_mode")
 }
 
-public client_putinserver(id)
+// Hook called when change value in cvar "ze_hud_info_mode"
+public fw_CVar_HudInfoModeChanged(pCvar)
 {
-	if(!is_user_bot(id))
+	// Remove all tasks.
+	if (!g_iHudInfoMode)
 	{
-		set_task(1.0, "ShowHUD", id+TASK_SHOWHUD, _, _, "b")
+		for (new id = 1; id <= MaxClients; id++)
+			remove_task(id+TASK_SHOWHUD)		
+	}
+	else
+	{
+		for (new id = 1; id <= MaxClients; id++)
+			if (!task_exists(id+TASK_SHOWHUD)) set_task(1.0, "ShowHUD", id+TASK_SHOWHUD, _, _, "b")
 	}
 }
 
+// Forward called when player join the server.
+public client_putinserver(id)
+{
+	// Player is bot or HLTV?
+	if(is_user_bot(id) || is_user_hltv(id) || !g_iHudInfoMode)
+		return
+
+	set_task(1.0, "ShowHUD", id+TASK_SHOWHUD, _, _, "b")
+}
+
+// Forward called when player disconnected from the server.
 public client_disconnected(id)
 {
+	// Remove task.
 	remove_task(id+TASK_SHOWHUD)
 }
 
 public ShowHUD(taskid)
 {
-	// Static.
-	static iHudInfoMode
-
-	// Get HUD info mode.
-	iHudInfoMode = get_pcvar_num(g_pCvarHudInfoMode)
-
-	if (iHudInfoMode == 0)
-		return
-	
 	// Static's.
-	static szName[32], szHealth[15], iPlayer
+	static szName[MAX_NAME_LENGTH], szHealth[15], iPlayer
 
 	iPlayer = ID_SHOWHUD
-	
+
 	if (!is_user_alive(iPlayer))
 	{
 		iPlayer = get_entvar(iPlayer, var_iuser2)
@@ -100,13 +114,13 @@ public ShowHUD(taskid)
 	{
 		get_user_name(iPlayer, szName, charsmax(szName))
 
-		switch (iHudInfoMode) 
+		switch (g_iHudInfoMode) 
 		{
 			case 1: // HUD
 			{
-				set_hudmessage(get_pcvar_num(g_pCvarSpecInfoColors[Red]), get_pcvar_num(g_pCvarSpecInfoColors[Green]), get_pcvar_num(g_pCvarSpecInfoColors[Blue]), HUD_SPECT_X, HUD_SPECT_Y, 0, 1.2, 1.1, 0.5, 0.6, -1)
+				set_hudmessage(g_iSpecInfoColors[Red], g_iSpecInfoColors[Green], g_iSpecInfoColors[Blue], HUD_SPECT_X, HUD_SPECT_Y, 0, 1.2, 1.1, 0.5, 0.6, -1)
 				
-				if (get_pcvar_num(g_pCvarHudInfoComma) == 1)
+				if (g_bHudInfoCommas)
 				{
 					AddCommas(get_user_health(iPlayer), szHealth, charsmax(szHealth))
 					
@@ -114,7 +128,7 @@ public ShowHUD(taskid)
 					{
 						ShowSyncHudMsg(ID_SHOWHUD, g_iMsgSync, "%L", LANG_PLAYER, "ZOMBIE_SPEC_COMMAS", szName, szHealth, ze_get_escape_coins(iPlayer))
 					}
-					else if ((iPlayer == ze_get_escape_leader_id()) && (0 < get_pcvar_num(g_pCvarRankEnabled) <= 2))
+					else if ((iPlayer == ze_get_escape_leader_id()) && (0 < g_iRankMode <= 2))
 					{
 						ShowSyncHudMsg(ID_SHOWHUD, g_iMsgSync, "%L", LANG_PLAYER, "HUMAN_SPEC_COMMAS_LEADER", szName, szHealth, ze_get_escape_coins(iPlayer))
 					}
@@ -129,7 +143,7 @@ public ShowHUD(taskid)
 					{
 						ShowSyncHudMsg(ID_SHOWHUD, g_iMsgSync, "%L", LANG_PLAYER, "ZOMBIE_SPEC", szName, get_user_health(iPlayer), ze_get_escape_coins(iPlayer))
 					}
-					else if ((iPlayer == ze_get_escape_leader_id()) && (0 < get_pcvar_num(g_pCvarRankEnabled) <= 2))
+					else if ((iPlayer == ze_get_escape_leader_id()) && (0 < g_iRankMode <= 2))
 					{
 						ShowSyncHudMsg(ID_SHOWHUD, g_iMsgSync, "%L", LANG_PLAYER, "HUMAN_SPEC_LEADER", szName, get_user_health(iPlayer), ze_get_escape_coins(iPlayer))
 					}
@@ -141,9 +155,9 @@ public ShowHUD(taskid)
 			}
 			case 2: // DHUD
 			{
-				set_dhudmessage(get_pcvar_num(g_pCvarSpecInfoColors[Red]), get_pcvar_num(g_pCvarSpecInfoColors[Green]), get_pcvar_num(g_pCvarSpecInfoColors[Blue]), HUD_SPECT_X, HUD_SPECT_Y, 0, 1.2, 1.1, 0.5, 0.6)
+				set_dhudmessage(g_iSpecInfoColors[Red], g_iSpecInfoColors[Green], g_iSpecInfoColors[Blue], HUD_SPECT_X, HUD_SPECT_Y, 0, 1.2, 1.1, 0.5, 0.6)
 				
-				if (get_pcvar_num(g_pCvarHudInfoComma) == 1)
+				if (g_bHudInfoCommas)
 				{
 					AddCommas(get_user_health(iPlayer), szHealth, charsmax(szHealth))
 					
@@ -151,7 +165,7 @@ public ShowHUD(taskid)
 					{
 						show_dhudmessage(ID_SHOWHUD, "%L", LANG_PLAYER, "ZOMBIE_SPEC_COMMAS", szName, szHealth, ze_get_escape_coins(iPlayer))
 					}
-					else if ((iPlayer == ze_get_escape_leader_id()) && (0 < get_pcvar_num(g_pCvarRankEnabled) <= 2))
+					else if ((iPlayer == ze_get_escape_leader_id()) && (0 < g_iRankMode <= 2))
 					{
 						show_dhudmessage(ID_SHOWHUD, "%L", LANG_PLAYER, "HUMAN_SPEC_COMMAS_LEADER", szName, szHealth, ze_get_escape_coins(iPlayer))
 					}
@@ -166,7 +180,7 @@ public ShowHUD(taskid)
 					{
 						show_dhudmessage(ID_SHOWHUD, "%L", LANG_PLAYER, "ZOMBIE_SPEC", szName, get_user_health(iPlayer), ze_get_escape_coins(iPlayer))
 					}
-					else if ((iPlayer == ze_get_escape_leader_id()) && (0 < get_pcvar_num(g_pCvarRankEnabled) <= 2))
+					else if ((iPlayer == ze_get_escape_leader_id()) && (0 < g_iRankMode <= 2))
 					{
 						show_dhudmessage(ID_SHOWHUD, "%L", LANG_PLAYER, "HUMAN_SPEC_LEADER", szName, get_user_health(iPlayer), ze_get_escape_coins(iPlayer))
 					}
@@ -180,13 +194,13 @@ public ShowHUD(taskid)
 	}
 	else if (ze_is_user_zombie(iPlayer))
 	{
-		switch (iHudInfoMode)
+		switch (g_iHudInfoMode)
 		{
 			case 1: // HUD
 			{
-				set_hudmessage(get_pcvar_num(g_pCvarZombieInfoColors[Red]), get_pcvar_num(g_pCvarZombieInfoColors[Green]), get_pcvar_num(g_pCvarZombieInfoColors[Blue]), HUD_STATS_X, HUD_STATS_Y, 0, 1.2, 1.1, 0.5, 0.6, -1)
+				set_hudmessage(g_iZombieInfoColors[Red], g_iZombieInfoColors[Green], g_iZombieInfoColors[Blue], HUD_STATS_X, HUD_STATS_Y, 0, 1.2, 1.1, 0.5, 0.6, -1)
 				
-				if (get_pcvar_num(g_pCvarHudInfoComma) == 1)
+				if (g_bHudInfoCommas)
 				{
 					AddCommas(get_user_health(ID_SHOWHUD), szHealth, charsmax(szHealth))
 
@@ -199,9 +213,9 @@ public ShowHUD(taskid)
 			}
 			case 2: // DHUD
 			{
-				set_dhudmessage(get_pcvar_num(g_pCvarZombieInfoColors[Red]), get_pcvar_num(g_pCvarZombieInfoColors[Green]), get_pcvar_num(g_pCvarZombieInfoColors[Blue]), HUD_STATS_X, HUD_STATS_Y, 0, 1.2, 1.1, 0.5, 0.6)
+				set_dhudmessage(g_iZombieInfoColors[Red], g_iZombieInfoColors[Green], g_iZombieInfoColors[Blue], HUD_STATS_X, HUD_STATS_Y, 0, 1.2, 1.1, 0.5, 0.6)
 				
-				if (get_pcvar_num(g_pCvarHudInfoComma) == 1)
+				if (g_bHudInfoCommas)
 				{
 					AddCommas(get_user_health(ID_SHOWHUD), szHealth, charsmax(szHealth))
 					
@@ -216,15 +230,15 @@ public ShowHUD(taskid)
 	}
 	else
 	{
-		switch (iHudInfoMode)
+		switch (g_iHudInfoMode)
 		{
 			case 1: // HUD
 			{
-				set_hudmessage(get_pcvar_num(g_pCvarHumanInfoColors[Red]), get_pcvar_num(g_pCvarHumanInfoColors[Green]), get_pcvar_num(g_pCvarHumanInfoColors[Blue]), HUD_STATS_X, HUD_STATS_Y, 0, 1.2, 1.1, 0.5, 0.6, -1)
+				set_hudmessage(g_iHumanInfoColors[Red], g_iHumanInfoColors[Green], g_iHumanInfoColors[Blue], HUD_STATS_X, HUD_STATS_Y, 0, 1.2, 1.1, 0.5, 0.6, -1)
 				
-				if (get_pcvar_num(g_pCvarHudInfoComma) == 1)
+				if (g_bHudInfoCommas)
 				{
-					if ((ID_SHOWHUD == ze_get_escape_leader_id()) && (0 < get_pcvar_num(g_pCvarRankEnabled) <= 2))
+					if ((ID_SHOWHUD == ze_get_escape_leader_id()) && (0 < g_iRankMode <= 2))
 					{
 						AddCommas(get_user_health(ID_SHOWHUD), szHealth, charsmax(szHealth))
 					
@@ -239,7 +253,7 @@ public ShowHUD(taskid)
 				}
 				else
 				{
-					if ((ID_SHOWHUD == ze_get_escape_leader_id()) && (0 < get_pcvar_num(g_pCvarRankEnabled) <= 2))
+					if ((ID_SHOWHUD == ze_get_escape_leader_id()) && (0 < g_iRankMode <= 2))
 					{
 						ShowSyncHudMsg(ID_SHOWHUD, g_iMsgSync, "%L", LANG_PLAYER, "HUMAN_LEADER", get_user_health(ID_SHOWHUD), ze_get_escape_coins(ID_SHOWHUD))
 					}
@@ -251,11 +265,11 @@ public ShowHUD(taskid)
 			}
 			case 2: // DHUD
 			{
-				set_dhudmessage(get_pcvar_num(g_pCvarHumanInfoColors[Red]), get_pcvar_num(g_pCvarHumanInfoColors[Green]), get_pcvar_num(g_pCvarHumanInfoColors[Blue]), HUD_STATS_X, HUD_STATS_Y, 0, 1.2, 1.1, 0.5, 0.6)
+				set_dhudmessage(g_iHumanInfoColors[Red], g_iHumanInfoColors[Green], g_iHumanInfoColors[Blue], HUD_STATS_X, HUD_STATS_Y, 0, 1.2, 1.1, 0.5, 0.6)
 				
-				if (get_pcvar_num(g_pCvarHudInfoComma) == 1)
+				if (g_bHudInfoCommas)
 				{
-					if ((ID_SHOWHUD == ze_get_escape_leader_id()) && (0 < get_pcvar_num(g_pCvarRankEnabled) <= 2))
+					if ((ID_SHOWHUD == ze_get_escape_leader_id()) && (0 < g_iRankMode <= 2))
 					{
 						AddCommas(get_user_health(ID_SHOWHUD), szHealth, charsmax(szHealth))
 					
@@ -270,7 +284,7 @@ public ShowHUD(taskid)
 				}
 				else
 				{
-					if ((ID_SHOWHUD == ze_get_escape_leader_id()) && (0 < get_pcvar_num(g_pCvarRankEnabled) <= 2))
+					if ((ID_SHOWHUD == ze_get_escape_leader_id()) && (0 < g_iRankMode <= 2))
 					{
 						show_dhudmessage(ID_SHOWHUD, "%L", LANG_PLAYER, "HUMAN_LEADER", get_user_health(ID_SHOWHUD), ze_get_escape_coins(ID_SHOWHUD))
 					}
