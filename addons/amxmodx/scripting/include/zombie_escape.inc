@@ -9,7 +9,7 @@
 #include <cs_weap_models_api>
 #include <zombie_escape_stocks>
 
-#define ZE_VERSION "1.6"
+#define ZE_VERSION "1.7"
 #define AUTHORS "ZE Dev Team"
 #define ZE_HOMEURL "https://github.com/raheem-cs/Zombie-Escape"
 
@@ -479,42 +479,47 @@ native ze_set_zombie_speed(id, iSpeed);
 */
 native ze_reset_zombie_speed(id);
 
-/*
-* Description:	Get user knockback.
-*
-* @param id		Client index.
-*
-* @return		Knockback value | if client valid
-*				-1				| If player not connected
-*
-* @note			This will throw error in case of invalid player.
-*				This function return integer value.
-*
-*/
-native ze_get_user_knockback(id);
+/**
+ * Description:	Get user knockback and knockback duck.
+ *
+ * @param id		Client index.
+ * @param iKbDuck 	Integer variable to store knockback duck in.
+ *
+ * @return			Knockback value | if client valid
+ *					-1				| If player not connected
+ *
+ * @note			This will throw error in case of invalid player.
+ *					This function return integer value.
+ *
+ */
+native ze_get_user_knockback(id, &iKbDuck = 0);
 
-/*
-* Description:			Set user knockback.
-*
-* @param id				Client index.
-* @param flKnockback	Knockback value as float.	
-*
-* @return				true	| If set successfully
-*						false	| If this player not connected
-*
-*/
-native ze_set_user_knockback(id, Float:flKnockback);
+/**
+ * Description:	Set user knockback.
+ *
+ * @param id				Client index.
+ * @param flKnockback		Knockback value as float.	
+ * @param flKnockbackDuck	Knockback duck value as float (-1 = Skip).
+ *
+ * @return					true  | If set successfully
+ *							false | If this player not connected
+ *
+ */
+native ze_set_user_knockback(id, Float:flKnockback, Float:flKnockbackDuck = -1.0);
 
-/*
-* Description:	Reset user knockback to use value from CVAR.
-*
-* @param id		Client index.
-*
-* @return		true	| If reset successfully
-*				false	| If this player not connected
-*
-*/
-native ze_reset_user_knockback(id);
+/**
+ * Description:	Reset user knockback to use value from CVAR.
+ *
+ * @param id	Client index.
+ * @param bDuck true = Reset knockback duck | false = Skip.
+ *
+ * @return		true	| If reset successfully
+ *				false	| If this player not connected
+ *
+ * @error 		If player not connected.
+ *
+ */
+native ze_reset_user_knockback(id, bool:bDuck = true);
 
 /*
 * Description:			Set user gravity.
@@ -1145,4 +1150,108 @@ native ze_show_user_rankhud(const id);
  * @note 		Native will return false, If player not connected or not zombie.
  *
  */
-native ze_is_user_first_zombie(const id);
+native bool:ze_is_user_first_zombie(const id);
+
+/**
+ * Description: Check player is last Zombie.
+ *
+ * @param id 	Client index.
+ *
+ * @return 		true 	| If player is last Zombie
+ *				false 	| If player not connected or Is not Zombie or Is not last Zombie 
+ *
+ */
+native bool:ze_is_user_last_zombie(const id);
+
+/**
+ * Description: Check player is last Human.
+ *
+ * @param id 	Client index.
+ *
+ * @return 		true 	| If player is last Zombie
+ *				false 	| If player not connected or Is not Zombie or Is not last Zombie 
+ * 
+ */
+native bool:ze_is_user_last_human(const id);
+
+/**
+ * Description: Set player custom Night Vision with colors.
+ *
+ * @param id 		Client index.
+ * @param iRed 		Red color.
+ * @param iGreen 	Green color.
+ * @param iBlue 	Blue color.
+ * @param iDensity 	Nightvision density.
+ * @param bAuto 	true = Enable night vision automatic | false = Otherwise.
+ * 
+ * @return 			true 	| If set successfully. 
+ * 					false 	| If player not connected.
+ *
+ * @error 			If player not connected.
+ *
+ */
+native ze_set_user_nvg(id, iRed, iGreen, iBlue, iDensity, bool:bAuto = true);
+
+/**
+ * Description: Remove player custom Night Vision.
+ *
+ * @param id 	Client index.
+ *
+ * @return 		true 	| If reset successfully.
+ *				false 	| If player not connected.
+ *
+ * @error 		If player not connected.
+ *
+ */
+native ze_reset_user_nvg(id);
+
+/**
+ * Description: Check Night Vision is ON or OFF.
+ *
+ * @param id 	Client index.
+ *
+ * @return 		true 	| If nightvision on.
+ *				false 	| If nightvision off or player not connected.
+ *
+ */
+native bool:ze_is_nvg_on(id);
+
+/**
+ * Description: Check player is Nemesis.
+ *
+ * @param id 	Client index.
+ *
+ * @return  	true 	| If player is Nemesis.
+ *				false 	| If player is not Nemesis or Is not connected or Is not Zombie.
+ *
+ */
+native bool:ze_is_user_nemesis(id);
+
+/**
+ * Description: Set player Nemesis.
+ *
+ * @param id 	Client index.
+ *
+ * @return 		true 	| If set successfully.
+ * 				false 	| If player not connected.
+ *
+ * @error 		If player not connected.
+ *
+ */
+native ze_set_user_nemesis(id);
+
+/**
+ * Description: Remove player Nemesis attributes
+ *
+ * @param id 		Client index.
+ * @param bZombie	Set player Zombie attributes after remove.
+ *
+ * @return 			true 	| If remove successfully.
+ * 					false 	| If player not connected.
+ *
+ * @note 			Nemesis health never reset, When remove Nemesis attributes.
+ *
+ * @error 			If player not connected.
+ *
+ */
+native ze_remove_user_nemesis(id, bool:bZombie = true);
