@@ -145,7 +145,7 @@ public plugin_precache()
 	read_Weapons(szFilePath)
 }
 
-public fw_NativeFilter_Pre(const szName[], id, bool:bTrap)
+public fw_NativeFilter_Pre(const szName[], id, bTrap)
 {
 	// Native not found?
 	if (!bTrap)
@@ -365,11 +365,18 @@ public handler_PrimaryWeapons_Menu(id, iKey)
 public show_SecondaryWeapons_Menu(id)
 {
 	// Local Variables.
-	new pWpnAttrib[WPN_ATTRIBUTES], szMenu[250], iItemNum, iWpnNum, iLen = 0
+	new pWpnAttrib[WPN_ATTRIBUTES], szMenu[250], iItemNum, iWpnNum, iLevel, iLen = 0
 
 	// Get number of items on page.
 	new iPageItem = g_iMenuData[id][MENU_PAGE_SEC]
 	new iMaxItems = min(iPageItem + 7, g_iSecondaryCount)
+
+	// Weapons with Levels?
+	if (g_bWeaponLevel)
+	{
+		// Get current level of player.
+		iLevel = ze_get_user_level(id)
+	}
 
 	// Menu title.
 	iLen = formatex(szMenu, charsmax(szMenu), "\r%L \y[%d/%d]^n^n", LANG_PLAYER, "MENU_SECONDARY_TITLE", iPageItem, g_iPrimaryCount)
@@ -384,7 +391,10 @@ public show_SecondaryWeapons_Menu(id)
 		if (g_bWeaponLevel)
 		{
 			// Add weapon name to Menu with Level.
-			iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r%d.\w%s \y%d^n", ++iItemNum, pWpnAttrib[WPN_NAME], pWpnAttrib[WPN_LEVEL])
+			if (pWpnAttrib[WPN_LEVEL] > iLevel)
+				iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r%d.\d%s \y%d^n", ++iItemNum, pWpnAttrib[WPN_NAME], pWpnAttrib[WPN_LEVEL])
+			else
+				iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r%d.\w%s^n", ++iItemNum, pWpnAttrib[WPN_NAME]) 
 		}
 		else
 		{
@@ -651,6 +661,10 @@ read_Weapons(const szFilePath[])
 		
 		// Remove blanks from text.
 		trim(szRead)
+
+		// It's new section?
+		if (szRead[0] == '[')
+			break
 
 		// Comment line or empty line?
 		if (szRead[0] == ';' || szRead[0] == '#' || !strlen(szRead))
