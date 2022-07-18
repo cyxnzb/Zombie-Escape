@@ -133,33 +133,39 @@ forward ze_user_infected_pre(iVictim, iInfector, iDamage);
 */
 forward ze_user_infected(iVictim, iInfector);
 
-/*
-* Description:	Called when zombies chosen.
-*
-* @return		Returns here useless, it will not affect the real appearing event.
-*
-* @note 		This forward never called, If no chosen Zombies.
-*				Try use ze_zombie_appear_ex(const iFirstZombies[], iZombieNum)
-*/
+/**
+ * Description:	Called when zombies chosen.
+ *
+ * @return		Returns here useless, it will not affect the real appearing event.
+ *
+ * @note 		This forward never called, If no chosen Zombies.
+ *				Try use ze_zombie_appear_ex(const iFirstZombies[], iZombieNum)
+ *				This forward is called in Escape Mode.
+ *
+ */
 forward ze_zombie_appear();
 
-/*
-* Description:	Called when zombies chosen.
-*
-* @param iFirstZombies[] 	Array contains an index of the first Zombies.
-* @param iZombieNum 		Number of the first Zombies.
-*
-* @return					Returns here useless, it will not affect the real appearing event.
-*
-*/
+/**
+ * Description:	Called when zombies chosen.
+ *
+ * @param iFirstZombies[] 	Array contains an index of the first Zombies.
+ * @param iZombieNum 		Number of the first Zombies.
+ *
+ * @return					Returns here useless, it will not affect the real appearing event.
+ *
+ * @note 					This forward called in Escape Mode.
+ *
+ */
 forward ze_zombie_appear_ex(const iFirstZombies[], iZombieNum);
 
-/*
-* Description:	Called when the chosen zombies released.
-*
-* @return		Returns here useless, it will not affect the real releasing event.
-*
-*/
+/**
+ * Description:	Called when the chosen zombies released.
+ *
+ * @return		Returns here useless, it will not affect the real releasing event.
+ *
+ * @note 		This forward called in Escape Mode.
+ *
+ */
 forward ze_zombie_release();
 
 /*
@@ -330,17 +336,19 @@ native bool:ze_is_user_zombie_ex(id);
 */
 native ze_is_game_started();
 
-/*
-* Description:	Check if this zombie in pre-release time or not.
-*				Pre-Release time is said to be freeze time for zombies.
-*
-* @param id		Client index.
-*
-* @return		true  | If this zombie in freeze time.
-*				false | If this zombie not in freeze time.
-*				-1    | If player not connected or this player is Human.
-*
-*/
+/**
+ * Description:	Check if this zombie in pre-release time or not.
+ *				Pre-Release time is said to be freeze time for zombies.
+ *
+ * @param id	Client index.
+ *
+ * @return		true  | If this zombie in freeze time.
+ *				false | If this zombie not in freeze time.
+ *				-1    | If player not connected or this player is Human.
+ *
+ * @note 		This native is working in Escape Mode.
+ *
+ */
 native ze_is_zombie_frozen(id);
 
 /*
@@ -1180,6 +1188,7 @@ native ze_show_user_rankhud(const id);
  *				false 	| If player in not first Zombie.
  *
  * @note 		Native will return false, If player not connected or not zombie.
+ *				This native is working in Escape Mode.
  *
  */
 native bool:ze_is_user_first_zombie(const id);
@@ -1190,7 +1199,7 @@ native bool:ze_is_user_first_zombie(const id);
  * @param id 	Client index.
  *
  * @return 		true 	| If player is last Zombie
- *				false 	| If player not connected or Is not Zombie or Is not last Zombie 
+ *				false 	| If player not alive or connected or Is not Zombie or Is not last Zombie 
  *
  */
 native bool:ze_is_user_last_zombie(const id);
@@ -1200,11 +1209,31 @@ native bool:ze_is_user_last_zombie(const id);
  *
  * @param id 	Client index.
  *
- * @return 		true 	| If player is last Zombie
- *				false 	| If player not connected or Is not Zombie or Is not last Zombie 
+ * @return 		true 	| If player is last Human
+ *				false 	| If player not connected or Is not Zombie or Is not last Human 
  * 
  */
 native bool:ze_is_user_last_human(const id);
+
+/**
+ * Description: Get client index of last Human.
+ *
+ * @noparam 
+ *
+ * @return 		Client index of last Human.
+ *
+ */
+native ze_get_last_human();
+
+/**
+ * Description: Get client index of last Zombie.
+ *
+ * @noparam
+ *
+ * @return 		Client index of last Zombie.
+ *
+ */
+native ze_get_last_zombie();
 
 /**
  * Description: Set player custom Night Vision with colors.
@@ -1256,6 +1285,7 @@ native bool:ze_is_nvg_on(id);
  * @return  	true 	| If player is Nemesis.
  *				false 	| If player is not Nemesis or Is not connected or Is not Zombie.
  *
+ *
  */
 native bool:ze_is_user_nemesis(id);
 
@@ -1287,3 +1317,26 @@ native ze_set_user_nemesis(id);
  *
  */
 native ze_remove_user_nemesis(id, bool:bZombie = true);
+
+/**
+ * Description: Check round is Escape mode.
+ *
+ * @noparam
+ *
+ * @return 		true 	| If round is Escape Mode.
+ *				false 	| Otherwise.
+ *
+ */
+native bool:ze_is_round_escape();
+
+/**
+ * Description: Check round is Nemesis mode.
+ *
+ * @noparam
+ *
+ * @return 		true 	| If round is Nemesis Mode.
+ *				false 	| Otherwose.
+ *
+ */
+native bool:ze_is_round_nemesis();
+
