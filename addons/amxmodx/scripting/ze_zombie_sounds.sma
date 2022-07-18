@@ -1,8 +1,5 @@
 #include <zombie_escape>
 
-// Setting File
-new const ZE_SETTING_RESOURCES[] = "zombie_escape.ini"
-
 // Default sounds
 new const szZombiePainSound[][] = // Pain Sound Same As Fall Sound
 {
