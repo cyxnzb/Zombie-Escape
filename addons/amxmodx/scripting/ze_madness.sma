@@ -1,41 +1,30 @@
 #include <zombie_escape>
 
-// Setting File
-new const ZE_SETTING_RESOURCES[] = "zombie_escape.ini"
-
-// Default Values
-new const szZombieMadnessSound[][] =
-{
-	"zombie_escape/zombie_madness1.wav"
-}
-
-// Sound Max Length
-#define SOUND_MAX_LENGTH 64
-
-// Dynamic Array to Store our sound in
-new Array:g_szZombie_Madness_Sound
-
 // Task IDs
 #define TASK_MADNESS 100
 #define TASK_AURA 200
 #define ID_MADNESS (taskid - TASK_MADNESS)
 #define ID_AURA (taskid - TASK_AURA)
 
-// Variables
-new g_iItemID, 
-	bool:g_bZombieInMadness[33]
-
-// Cvars
-new g_pCvarMadnessTime, 
-	g_pCvarMadnessAuraColors[3]
-	
-// Colors
-enum
+// Enums (Colors)
+enum _:Colors
 {
 	Red = 0,
 	Green,
 	Blue
 }
+
+// Default Values
+new const g_szZombieMadnessSound[][] = { "zombie_escape/zombie_madness1.wav" }
+
+// Global Variables
+new g_iItemID
+new g_iMadnessAuraColors[Colors]
+new bool:g_bZombieInMadness[MAX_PLAYERS+1]
+new Float:g_flMadnessTime
+
+// Dynamic Array to Store our sound in
+new Array:g_aZombie_Madness_Sound
 
 public plugin_init()
 {
@@ -43,45 +32,44 @@ public plugin_init()
 	
 	// Hook Chains
 	RegisterHookChain(RG_CBasePlayer_TraceAttack, "Fw_TraceAttack_Pre", 0)
-	RegisterHookChain(RG_CBasePlayer_Spawn, "Fw_PlayerSpawn_Post", 1)
 	RegisterHookChain(RG_CBasePlayer_Killed, "Fw_PlayerKilled_Post", 1)
-	
+		
+	// Cvars
+	bind_pcvar_float(create_cvar("ze_madness_time", "5.0"), g_flMadnessTime)
+	bind_pcvar_num(create_cvar("ze_madness_color_red", "255"), g_iMadnessAuraColors[Red])
+	bind_pcvar_num(create_cvar("ze_madness_color_green", "0"),  g_iMadnessAuraColors[Green])
+	bind_pcvar_num(create_cvar("ze_madness_color_blue", "0"), g_iMadnessAuraColors[Blue])
+
 	// Register our item
 	g_iItemID = ze_register_item("Zombie Madness", 50, 0)
-	
-	// Cvars
-	g_pCvarMadnessTime = register_cvar("ze_madness_time", "5.0")
-	g_pCvarMadnessAuraColors[Red] = register_cvar("ze_madness_color_red", "255")
-	g_pCvarMadnessAuraColors[Green] = register_cvar("ze_madness_color_green", "0")
-	g_pCvarMadnessAuraColors[Blue] = register_cvar("ze_madness_color_blue", "0")
 }
 
 public plugin_precache()
 {
 	// Initialize arrays
-	g_szZombie_Madness_Sound = ArrayCreate(SOUND_MAX_LENGTH, 1)
+	g_aZombie_Madness_Sound = ArrayCreate(MAX_SOUND_LENGTH, 1)
 	
 	// Load from external file
-	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "ZOMBIE MADNESS", g_szZombie_Madness_Sound)
+	amx_load_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "ZOMBIE MADNESS", g_aZombie_Madness_Sound)
 	
 	// If we couldn't load custom sounds from file, use and save default ones
 	
 	new iIndex
 	
-	if (ArraySize(g_szZombie_Madness_Sound) == 0)
+	if (ArraySize(g_aZombie_Madness_Sound) == 0)
 	{
-		for (iIndex = 0; iIndex < sizeof szZombieMadnessSound; iIndex++)
-			ArrayPushString(g_szZombie_Madness_Sound, szZombieMadnessSound[iIndex])
+		for (iIndex = 0; iIndex < sizeof g_szZombieMadnessSound; iIndex++)
+			ArrayPushString(g_aZombie_Madness_Sound, g_szZombieMadnessSound[iIndex])
 		
 		// Save to external file
-		amx_save_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "ZOMBIE MADNESS", g_szZombie_Madness_Sound)
+		amx_save_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "ZOMBIE MADNESS", g_aZombie_Madness_Sound)
 	}
 	
 	// Precache sounds
-	new szSound[SOUND_MAX_LENGTH]
-	for (iIndex = 0; iIndex < ArraySize(g_szZombie_Madness_Sound); iIndex++)
+	new szSound[MAX_SOUND_LENGTH], iArrSize = ArraySize(g_aZombie_Madness_Sound)
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
 	{
-		ArrayGetString(g_szZombie_Madness_Sound, iIndex, szSound, charsmax(szSound))
+		ArrayGetString(g_aZombie_Madness_Sound, iIndex, szSound, charsmax(szSound))
 		precache_sound(szSound)
 	}
 }
@@ -121,19 +109,19 @@ public ze_select_item_post(id, itemid)
 	set_task(0.1, "Madness_Aura", id+TASK_AURA, _, _, "b")
 	
 	// Madness sound
-	new szSound[SOUND_MAX_LENGTH]
-	ArrayGetString(g_szZombie_Madness_Sound, random_num(0, ArraySize(g_szZombie_Madness_Sound) - 1), szSound, charsmax(szSound))
+	new szSound[MAX_SOUND_LENGTH]
+	ArrayGetString(g_aZombie_Madness_Sound, random_num(0, ArraySize(g_aZombie_Madness_Sound) - 1), szSound, charsmax(szSound))
 	emit_sound(id, CHAN_VOICE, szSound, 1.0, ATTN_NORM, 0, PITCH_NORM)
 	
 	// Set task to remove it
-	set_task(get_pcvar_float(g_pCvarMadnessTime), "Remove_Zombie_Madness", id+TASK_MADNESS)
+	set_task(g_flMadnessTime, "Remove_Zombie_Madness", id+TASK_MADNESS)
 }
 
 // Player Spawn
-public Fw_PlayerSpawn_Post(id)
+public ze_player_spawn_post(id)
 {
 	// Not alive or didn't join a team yet
-	if (!is_user_alive(id) || !get_member(id, m_iTeam))
+	if (!is_user_alive(id) || !get_user_team(id))
 		return
 	
 	// Remove zombie madness from a previous round
@@ -219,9 +207,9 @@ public Madness_Aura(taskid)
 	write_coord(origin[1]) // y
 	write_coord(origin[2]) // z
 	write_byte(20) // radius
-	write_byte(get_pcvar_num(g_pCvarMadnessAuraColors[Red])) // r
-	write_byte(get_pcvar_num(g_pCvarMadnessAuraColors[Green])) // g
-	write_byte(get_pcvar_num(g_pCvarMadnessAuraColors[Blue])) // b
+	write_byte(g_iMadnessAuraColors[Red]) // r
+	write_byte(g_iMadnessAuraColors[Green]) // g
+	write_byte(g_iMadnessAuraColors[Blue]) // b
 	write_byte(2) // life
 	write_byte(0) // decay rate
 	message_end()

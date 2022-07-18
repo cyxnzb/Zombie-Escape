@@ -6,44 +6,41 @@ new const ZE_EXTRAITEM_FILE[] = "ze_extraitems.ini"
 // Defines
 #define MENU_PAGE_ITEMS g_iMenuData[id]
 
-// Const
-const OFFSET_CSMENUCODE = 205
-
 // Forwards
 enum _:TOTAL_FORWARDS
 {
-	FW_ITEM_SELECT_PRE = 0,
-	FW_ITEM_SELECT_POST
+	FW_RESULT = 0,
+	FW_ITEM_SELECT_PRE,
+	FW_ITEM_SELECT_POST,
+	FW_ITEM_MENU_INIT
 }
-
-new g_iForwards[TOTAL_FORWARDS],
-	g_iForwardReturn
 
 // Variables
-new Array:g_szItemRealName, 
-	Array:g_szItemName,  
-	Array:g_iItemCost,
-	Array:g_iItemLimit,
-	Array:g_iItemGlobalLimit
+new Array:g_szItemRealName
+new Array:g_szItemName
+new Array:g_iItemCost
+new Array:g_iItemLimit
+new Array:g_iItemGlobalLimit
 
-new g_iItemCount, 
-	g_szAdditionalMenuText[64],
-	g_iMenuData[33]
+// Global Variables.
+new g_iItemCount,
+	g_iMenuData[MAX_PLAYERS+1],
+	g_iForwards[TOTAL_FORWARDS]
 
-public plugin_init()
-{
-	register_plugin("[ZE] Items Manager", ZE_VERSION, AUTHORS)
-	
-	// Commands
-	register_clcmd("say /items", "Cmd_Items")
-	
-	// Forwards (In Pre Return Values important)
-	g_iForwards[FW_ITEM_SELECT_PRE] = CreateMultiForward("ze_select_item_pre", ET_CONTINUE, FP_CELL, FP_CELL, FP_CELL)
-	g_iForwards[FW_ITEM_SELECT_POST] = CreateMultiForward("ze_select_item_post", ET_IGNORE, FP_CELL, FP_CELL, FP_CELL)
-}
+// String
+new g_szAdditionalMenuText[64]
 
+// Forward allows register new natives.
 public plugin_natives()
 {
+	// Create new dynamic array's in Memory.
+	g_szItemRealName = ArrayCreate(MAX_NAME_LENGTH, 1)
+	g_szItemName = ArrayCreate(MAX_NAME_LENGTH, 1)
+	g_iItemCost = ArrayCreate(1, 1)
+	g_iItemLimit = ArrayCreate(1, 1)
+	g_iItemGlobalLimit = ArrayCreate(1, 1)
+
+	// Create new natives.
 	register_native("ze_register_item", "native_ze_register_item")
 	register_native("ze_show_items_menu", "native_ze_show_items_menu")
 	register_native("ze_force_buy_item", "native_ze_force_buy_item")
@@ -54,32 +51,46 @@ public plugin_natives()
 	register_native("ze_get_item_global_limit", "native_ze_get_item_global_limit")
 	register_native("ze_is_valid_itemid", "native_ze_is_valid_itemid")
 	register_native("ze_get_item_name", "native_ze_get_item_name")
-	
-	g_szItemRealName = ArrayCreate(32, 1)
-	g_szItemName = ArrayCreate(32, 1)
-	g_iItemCost = ArrayCreate(1, 1)
-	g_iItemLimit = ArrayCreate(1, 1)
-	g_iItemGlobalLimit = ArrayCreate(1, 1)
 }
 
+// Forward called after server activation.
+public plugin_init()
+{
+	// Load plugin.
+	register_plugin("[ZE] Items Manager", ZE_VERSION, AUTHORS, ZE_HOMEURL, "Extra Items Menu")
+	
+	// Commands
+	register_clcmd("say /items", "Cmd_Items")
+	register_clcmd("say_team /items", "Cmd_Items")
+	
+	// Forwards (In Pre Return Values important)
+	g_iForwards[FW_ITEM_MENU_INIT] = CreateMultiForward("ze_items_menu_init", ET_CONTINUE, FP_CELL, FP_CELL, FP_CELL, FP_STRING)
+	g_iForwards[FW_ITEM_SELECT_PRE] = CreateMultiForward("ze_select_item_pre", ET_CONTINUE, FP_CELL, FP_CELL, FP_CELL)
+	g_iForwards[FW_ITEM_SELECT_POST] = CreateMultiForward("ze_select_item_post", ET_IGNORE, FP_CELL, FP_CELL, FP_CELL)
+}
+
+// Forward called when player disconnected from the server.
 public client_disconnected(id)
 {
+	// Reset menu data.
 	MENU_PAGE_ITEMS = 0
 }
 
+// Forward called when player execute commands of items.
 public Cmd_Items(id)
 {
+	// Player not alive?
 	if (!is_user_alive(id))
 		return
 	
+	// Show items Menu for player.
 	Show_Items_Menu(id)
 }
 
 // Items Menu
 Show_Items_Menu(id)
 {
-	static menu[128], name[32], cost, transkey[64]
-	new menuid, index, itemdata[2]
+	new menu[128], transkey[64], name[MAX_NAME_LENGTH], itemdata[2], cost, menuid, index
 	
 	// Title
 	formatex(menu, charsmax(menu), "%L:\r", id, "BUY_EXTRAITEM")
@@ -89,25 +100,25 @@ Show_Items_Menu(id)
 	for (index = 0; index < g_iItemCount; index++)
 	{
 		// Additional text to display
-		g_szAdditionalMenuText[0] = 0
+		g_szAdditionalMenuText[0] = EOS
 		
 		// Execute item select attempt forward
-		ExecuteForward(g_iForwards[FW_ITEM_SELECT_PRE], g_iForwardReturn, id, index, 0)
+		ExecuteForward(g_iForwards[FW_ITEM_SELECT_PRE], g_iForwards[FW_RESULT], id, index, 0)
 		
 		// Show item to player?
-		if (g_iForwardReturn >= ZE_ITEM_DONT_SHOW)
+		if (g_iForwards[FW_RESULT] >= ZE_ITEM_DONT_SHOW)
 			continue;
-		
+
 		// Add Item Name and Cost
 		ArrayGetString(g_szItemName, index, name, charsmax(name))
 		cost = ArrayGetCell(g_iItemCost, index)
-		
+
 		// ML support for item name
 		formatex(transkey, charsmax(transkey), "ITEMNAME %s", name)
 		if (GetLangTransKey(transkey) != TransKey_Bad) formatex(name, charsmax(name), "%L", id, transkey)
 		
 		// Item available to player?
-		if (g_iForwardReturn >= ZE_ITEM_UNAVAILABLE)
+		if (g_iForwards[FW_RESULT] >= ZE_ITEM_UNAVAILABLE)
 			formatex(menu, charsmax(menu), "\d%s %d	%s", name, cost, g_szAdditionalMenuText)
 		else
 			formatex(menu, charsmax(menu), "%s \y%d	\w%s", name, cost, g_szAdditionalMenuText)
@@ -136,8 +147,7 @@ Show_Items_Menu(id)
 	// If remembered page is greater than number of pages, clamp down the value
 	MENU_PAGE_ITEMS = min(MENU_PAGE_ITEMS, menu_pages(menuid)-1)
 	
-	// Fix for AMXX custom menus
-	set_pdata_int(id, OFFSET_CSMENUCODE, 0)
+	// Show menu for player.
 	menu_display(id, menuid, MENU_PAGE_ITEMS)
 }
 
@@ -177,14 +187,14 @@ public Extra_Items_Menu(id, menuid, item)
 Buy_Item(id, itemid, ignorecost = 0)
 {
 	// Execute item select attempt forward
-	ExecuteForward(g_iForwards[FW_ITEM_SELECT_PRE], g_iForwardReturn, id, itemid, ignorecost)
+	ExecuteForward(g_iForwards[FW_ITEM_SELECT_PRE], g_iForwards[FW_RESULT], id, itemid, ignorecost)
 	
 	// Item available to player?
-	if (g_iForwardReturn >= ZE_ITEM_UNAVAILABLE)
+	if (g_iForwards[FW_RESULT] >= ZE_ITEM_UNAVAILABLE)
 		return;
 	
 	// Execute item selected forward
-	ExecuteForward(g_iForwards[FW_ITEM_SELECT_POST], g_iForwardReturn, id, itemid, ignorecost)
+	ExecuteForward(g_iForwards[FW_ITEM_SELECT_POST], g_iForwards[FW_RESULT], id, itemid, ignorecost)
 }
 
 // Natives

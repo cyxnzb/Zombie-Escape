@@ -2,15 +2,11 @@
 
 // Variables
 new g_iLimitCounter[MAX_PLAYERS+1][MAX_EXTRA_ITEMS],
-	g_iGlobalLimitCounter[MAX_EXTRA_ITEMS],
-	g_iMaxClients
+	g_iGlobalLimitCounter[MAX_EXTRA_ITEMS]
 
 public plugin_init()
 {
 	register_plugin("[ZE] Items Manager: Limit", ZE_VERSION, AUTHORS)
-	
-	// Static Values
-	g_iMaxClients = get_member_game(m_nMaxPlayers)
 }
 
 public ze_select_item_pre(id, itemid, ignorecost)
@@ -79,11 +75,12 @@ public ze_select_item_post(id, itemid, ignorecost)
 public ze_game_started()
 {
 	// Rest our counters to zero
-	for (new j = 1; j <= g_iMaxClients; j++)
+	new id, i
+	for (id = 1; id <= MaxClients; id++)
 	{
-		for (new i = 0; i < MAX_EXTRA_ITEMS; i++)
+		for (i = 0; i < MAX_EXTRA_ITEMS; i++)
 		{
-			g_iLimitCounter[j][i] = 0
+			g_iLimitCounter[id][i] = 0
 		}
 	}
 	
