@@ -42,10 +42,9 @@ new g_iReleasColors[Colors]
 new bool:g_bNoticeSound
 new bool:g_bSmartRandom
 new bool:g_bReleaseTime
+new bool:g_bIsRoundEscape
 new bool:g_bBlockInfection
 new bool:g_bRespawnAsZombie
-new bool:g_bIsLastHuman[MAX_PLAYERS+1]
-new bool:g_bIsLastZombie[MAX_PLAYERS+1]
 new bool:g_bIsFirstZombie[MAX_PLAYERS+1]
 new bool:g_bIsZombieFrozen[MAX_PLAYERS+1]
 new Float:g_flRoundEndDelay
@@ -65,8 +64,7 @@ public plugin_natives()
 	register_native("ze_is_zombie_frozen", "native_is_zombie_frozen", 1)
 	register_native("ze_remove_zombie_freeze_msg", "native_remove_zombie_freeze_msg", 1)
 	register_native("ze_is_user_first_zombie", "native_is_user_first_zombie", 1)
-	register_native("ze_is_user_last_zombie", "native_is_user_last_zombie", 1)
-	register_native("ze_is_user_last_human", "native_is_user_last_human", 1)
+	register_native("ze_is_round_escape", "native_is_round_escape", 1)
 }
 
 // Forward called after server activation.
@@ -76,7 +74,6 @@ public plugin_init()
 	register_plugin("[ZE] Gamemode: Escape", ZE_VERSION, AUTHORS, ZE_HOMEURL, "Game mode: Escape Mode.")
 
 	// Hook Chains.
-	RegisterHookChain(RG_CBasePlayer_Killed, "fw_PlayerKilled_Post", 1)
 	g_pHookTraceAttack = RegisterHookChain(RG_CBasePlayer_TraceAttack, "fw_TraceAttack_Pre", 0)
 	DisableHookChain(g_pHookTraceAttack) // Disable hook "TraceAttack" to allow bullet damage.
 
@@ -184,6 +181,9 @@ public ze_fire_pre(id)
 // Forward called every New Round (Is important to declare it in pre-forward).
 public ze_game_started_pre()
 {
+	// Reset boolean.
+	g_bIsRoundEscape = false
+
 	// Stop all sounds.
 	StopSound()
 
@@ -194,10 +194,14 @@ public ze_game_started_pre()
 	DisableHookChain(g_pHookTraceAttack)
 
 	// Reset array.
-	arrayset(g_bIsLastHuman, false, sizeof(g_bIsLastHuman))
-	arrayset(g_bIsLastZombie, false, sizeof(g_bIsLastZombie))
-	arrayset(g_bIsFirstZombie, false, sizeof(g_bIsFirstZombie))
 	arrayset(g_bIsZombieFrozen, false, sizeof(g_bIsZombieFrozen))
+}
+
+// Forward called after player humanized.
+public ze_user_humanized(id)
+{
+	// Reset boolean
+	g_bIsFirstZombie[id] = false
 }
 
 // Forward called when player spawn.
@@ -213,49 +217,6 @@ public ze_player_spawn_post(id)
 		// Allow spawning player Zombie.
 		ze_allow_respawn_as_zombie(id)
 	}
-
-	// Delay before check last Human or Zombie.
-	set_task(0.1, "checkLastPlayer")
-}
-
-// Forward called after player killed.
-public fw_PlayerKilled_Post(iVictim, iAttacker, iShouldGibs)
-{
-	// Delay before check last Human or Zombie.
-	set_task(0.1, "checkLastPlayer")
-}
-
-public checkLastPlayer()
-{
-	// It's last Zombie?
-	if (ze_get_zombies_number() == 1)
-	{
-		// Find on player index of last Zombie.
-		for (new id = 1; id <= MaxClients; id++)
-		{
-			// Player is not alive?
-			if (!is_user_alive(id) || !ze_is_user_zombie_ex(id))
-				continue
-
-			// Player is Last Zombie?
-			g_bIsLastZombie[id] = true
-		} 
-	}
-
-	// It's last Human?
-	if (ze_get_humans_number() == 1)
-	{
-		// Find on player index of last Human.
-		for (new id = 1; id <= MaxClients; id++)
-		{
-			// Player is not alive?
-			if (!is_user_alive(id) || ze_is_user_zombie_ex(id))
-				continue
-
-			// Player is Last Human?
-			g_bIsLastHuman[id] = true
-		} 		
-	}	
 }
 
 // Forward called when player disconnected from server.
@@ -270,9 +231,6 @@ public client_disconnected(id)
 	TrieDeleteKey(g_tChosenPlayers, szAuthId)
 
 	// Reset boolean.
-	g_bIsLastHuman[id] = false
-	g_bIsLastZombie[id] = false
-	g_bIsFirstZombie[id] = false
 	g_bIsZombieFrozen[id] = false
 }
 
@@ -313,6 +271,9 @@ public ze_gamemode_chosen(game_id)
 	// The game hasn't started yet?
 	if (!ze_is_game_started())
 		return
+
+	// Escape mode has started.
+	g_bIsRoundEscape = true
 
 	// Notice mode.
 	switch (g_iNoticeMsg)
@@ -395,6 +356,9 @@ public ze_gamemode_chosen(game_id)
 			// Set first Zombie custom health.
 			set_entvar(id, var_health, float(g_iFirstZombieHealth))
 		}
+
+		// First Zombie
+		g_bIsFirstZombie[id] = true
 
 		// New Zombie.
 		iFirstZombies[iZombieNum++] = id
@@ -556,6 +520,9 @@ public ze_roundend(iWinTeam)
 			ze_disallow_respawn_as_zombie(id)
 		}
 	}
+
+	// Reset boolean.
+	g_bIsRoundEscape = false
 }
 
 /**
@@ -567,27 +534,7 @@ public native_is_user_first_zombie(id)
 	if (!is_user_connected(id) || !ze_is_user_zombie_ex(id))
 		return false
 
-	return g_bIsZombieFrozen[id] // Return true or false.
-}
-
-public native_is_user_last_zombie(id)
-{
-	// Player not found or Is not Zombie?
-	if (!is_user_alive(id) || !ze_is_user_zombie_ex(id))
-		return false
-	
-	// Return true or false.
-	return g_bIsLastZombie[id]	
-}
-
-public native_is_user_last_human(id)
-{
-	// Player not found or Is not Zombie?
-	if (!is_user_alive(id) || ze_is_user_zombie_ex(id))
-		return false
-	
-	// Return true or false.
-	return g_bIsLastHuman[id]
+	return g_bIsFirstZombie[id] // Return true or false.
 }
 
 public native_is_zombie_frozen(id)
@@ -611,4 +558,9 @@ public native_remove_zombie_freeze_msg()
 	}
 	
 	return false	
+}
+
+public bool:native_is_round_escape()
+{
+	return g_bIsRoundEscape
 }

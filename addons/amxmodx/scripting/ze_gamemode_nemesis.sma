@@ -21,9 +21,16 @@ new g_iReqAlivePlayers
 new g_iNoticeMsg
 new g_iNoticeColors[Colors]
 new bool:g_bNoticeSound
+new bool:g_bIsNemesisRound
 
 // Dynamic Array.
 new Array:g_aStartSound
+
+// Forward allows registering new natives.
+public plugin_natives()
+{
+	register_native("ze_is_round_nemesis", "native_is_round_nemesis", 1)
+} 
 
 // Forward called after server activation.
 public plugin_init()
@@ -74,6 +81,13 @@ public plugin_precache()
 	}
 }
 
+// Forward called before game started.
+public ze_game_started_pre()
+{
+	// Reset boolean
+	g_bIsNemesisRound = false
+}
+
 // Forward called before game mode start.
 public ze_gamemode_chosen_pre(game_id, bSkipCheck)
 {
@@ -99,6 +113,9 @@ public ze_gamemode_chosen(game_id)
 	// The game hasn't started yet?
 	if (!ze_is_game_started())
 		return
+
+	// Nemesis mode has started.
+	g_bIsNemesisRound = true
 
 	// Notice mode.
 	switch (g_iNoticeMsg)
@@ -155,4 +172,19 @@ public ze_gamemode_chosen(game_id)
 		// New Nemesis
 		iNemesisNum++
 	}
+}
+
+// Forward called when round over.
+public ze_roundend(iWinTeam)
+{
+	// Reset boolean.
+	g_bIsNemesisRound = false
+}
+
+/**
+ * Function of natives:
+ */
+public native_is_round_nemesis()
+{
+	return g_bIsNemesisRound
 }
