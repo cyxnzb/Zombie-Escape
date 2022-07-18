@@ -12,6 +12,8 @@ enum _:TOTAL_FORWARDS
 	FORWARD_INFECTED,
 	FORWARD_GAME_STARTED_PRE,
 	FORWARD_GAME_STARTED,
+	FORWARD_LAST_HUMAN,
+	FORWARD_LAST_ZOMBIE,
 	FORWARD_DISCONNECT
 }
 
@@ -123,15 +125,17 @@ public plugin_init()
 	register_logevent("Round_End", 2, "1=Round_End")
 	
 	// Create Forwards
-	g_iForwards[FORWARD_ROUNDEND] 			= CreateMultiForward("ze_roundend", ET_IGNORE, FP_CELL)
-	g_iForwards[FORWARD_HUMANIZED_PRE]		= CreateMultiForward("ze_user_humanized_pre", ET_CONTINUE, FP_CELL)
-	g_iForwards[FORWARD_HUMANIZED] 			= CreateMultiForward("ze_user_humanized", ET_IGNORE, FP_CELL)
-	g_iForwards[FORWARD_PRE_INFECTED] 		= CreateMultiForward("ze_user_infected_pre", ET_CONTINUE, FP_CELL, FP_CELL, FP_CELL)
-	g_iForwards[FORWARD_INFECTED] 			= CreateMultiForward("ze_user_infected", ET_IGNORE, FP_CELL, FP_CELL)
-	g_iForwards[FORWARD_GAME_STARTED_PRE] 	= CreateMultiForward("ze_game_started_pre", ET_CONTINUE)
-	g_iForwards[FORWARD_GAME_STARTED] 		= CreateMultiForward("ze_game_started", ET_IGNORE)
-	g_iForwards[FORWARD_DISCONNECT] 		= CreateMultiForward("ze_player_disconnect", ET_CONTINUE, FP_CELL)
-	g_iForwards[FORWARD_SPAWN_POST] 		= CreateMultiForward("ze_player_spawn_post", ET_IGNORE, FP_CELL)
+	g_iForwards[FORWARD_ROUNDEND] = CreateMultiForward("ze_roundend", ET_IGNORE, FP_CELL)
+	g_iForwards[FORWARD_HUMANIZED_PRE] = CreateMultiForward("ze_user_humanized_pre", ET_CONTINUE, FP_CELL)
+	g_iForwards[FORWARD_HUMANIZED] = CreateMultiForward("ze_user_humanized", ET_IGNORE, FP_CELL)
+	g_iForwards[FORWARD_PRE_INFECTED] = CreateMultiForward("ze_user_infected_pre", ET_CONTINUE, FP_CELL, FP_CELL, FP_CELL)
+	g_iForwards[FORWARD_INFECTED] = CreateMultiForward("ze_user_infected", ET_IGNORE, FP_CELL, FP_CELL)
+	g_iForwards[FORWARD_GAME_STARTED_PRE] = CreateMultiForward("ze_game_started_pre", ET_CONTINUE)
+	g_iForwards[FORWARD_GAME_STARTED] = CreateMultiForward("ze_game_started", ET_IGNORE)
+	g_iForwards[FORWARD_DISCONNECT] = CreateMultiForward("ze_player_disconnect", ET_CONTINUE, FP_CELL)
+	g_iForwards[FORWARD_SPAWN_POST] = CreateMultiForward("ze_player_spawn_post", ET_IGNORE, FP_CELL)
+	g_iForwards[FORWARD_LAST_HUMAN] = CreateMultiForward("ze_user_last_human", ET_IGNORE, FP_CELL)
+	g_iForwards[FORWARD_LAST_ZOMBIE] = CreateMultiForward("ze_user_last_zombie", ET_IGNORE, FP_CELL)
 	
 	// Registering Messages
 	register_message(get_user_msgid("TeamScore"), "Message_Teamscore")
@@ -669,7 +673,13 @@ public checkLastPlayer()
 
 			// Player isn't Zombie?
 			if (!g_bIsZombie[id])
+			{
+				// Store index of last Human in Global Variable.
 				g_iLastHuman = id
+
+				// Execute forward ze_user_last_human(id)
+				ExecuteForward(g_iForwards[FORWARD_LAST_HUMAN], _/* Ignore return value */, id)
+			}
 		}
 	}
 	else
@@ -688,7 +698,13 @@ public checkLastPlayer()
 
 			// Player is Zombie?
 			if (g_bIsZombie[id])
+			{
+				// Store index of last Zombie in Global Variable.
 				g_iLastZombie = id
+			
+				// Execute forward ze_user_last_zombie(id)
+				ExecuteForward(g_iForwards[FORWARD_LAST_ZOMBIE], _/* Ignore return value */, id)
+			}
 		}
 	}
 	else
