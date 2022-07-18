@@ -674,7 +674,7 @@ public checkLastPlayer()
 	}
 	else
 	{
-		g_iLastHuman = 0 // There is no last Human.
+		g_iLastHuman = 0
 	}
 
 	// Last zombie?
@@ -693,7 +693,7 @@ public checkLastPlayer()
 	}
 	else
 	{
-		g_iLastZombie = 0 // There is no last Zombie.
+		g_iLastZombie = 0
 	}
 }
 
