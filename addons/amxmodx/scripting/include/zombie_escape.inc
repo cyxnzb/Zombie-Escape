@@ -480,38 +480,49 @@ native ze_set_zombie_speed(id, iSpeed);
 native ze_reset_zombie_speed(id);
 
 /**
- * Description:	Get user knockback and knockback duck.
+ * Description:	Get user knockback.
  *
  * @param id		Client index.
- * @param iKbDuck 	Integer variable to store knockback duck in.
  *
  * @return			Knockback value | if client valid
- *					-1				| If player not connected
+ *					-1				| If player not connected or ins't Zombie
  *
- * @note			This will throw error in case of invalid player.
- *					This function return integer value.
+ * @error 			If player not connected.
  *
  */
-native ze_get_user_knockback(id, &iKbDuck = 0);
+native ze_get_user_knockback(id);
+
+/**
+ * Description:	Get user knockback (Float value).
+ *
+ * @param id		Client index.
+ *
+ * @return			Knockback value | if client valid
+ *					-1				| If player not connected or ins't Zombie
+ *
+ * @error 			If player not connected.
+ *
+ */
+native Float:ze_get_user_knockback_f(id);
 
 /**
  * Description:	Set user knockback.
  *
- * @param id				Client index.
- * @param flKnockback		Knockback value as float.	
- * @param flKnockbackDuck	Knockback duck value as float (-1 = Skip).
+ * @param id			Client index.
+ * @param flKnockback	Knockback value as float.	
  *
- * @return					true  | If set successfully
- *							false | If this player not connected
+ * @return				true  | If set successfully
+ *						false | If this player not connected
+ *
+ * @error 				If player not connected.
  *
  */
-native ze_set_user_knockback(id, Float:flKnockback, Float:flKnockbackDuck = -1.0);
+native ze_set_user_knockback(id, Float:flKnockback);
 
 /**
  * Description:	Reset user knockback to use value from CVAR.
  *
  * @param id	Client index.
- * @param bDuck true = Reset knockback duck | false = Skip.
  *
  * @return		true	| If reset successfully
  *				false	| If this player not connected
@@ -519,7 +530,7 @@ native ze_set_user_knockback(id, Float:flKnockback, Float:flKnockbackDuck = -1.0
  * @error 		If player not connected.
  *
  */
-native ze_reset_user_knockback(id, bool:bDuck = true);
+native ze_reset_user_knockback(id);
 
 /*
 * Description:			Set user gravity.
