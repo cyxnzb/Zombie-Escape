@@ -99,7 +99,7 @@ public plugin_init()
 	bind_pcvar_float(get_cvar_pointer("ze_round_end_delay"), g_flRoundEndDelay)
 
 	// New gamemode.
-	g_iGame = ze_gamemode_register("Escape")
+	g_iGame = ze_gamemode_register("Escape Mode")
 
 	// Set "Escape Mode" default gamemode.
 	ze_gamemode_set_default(g_iGame)
