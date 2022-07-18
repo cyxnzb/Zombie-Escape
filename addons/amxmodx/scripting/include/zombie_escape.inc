@@ -631,6 +631,27 @@ native ze_stop_mod_rendering(id, bool:bSet);
 */
 native ze_set_fire_grenade(id, bSet);
 
+/**
+ * Description:	Used to set fire on zombie with duration.
+ *
+ * @param id	Client index.
+ * @param delay Fire duration, -1 = CVar duration.
+ *
+ * @return		true  | If successfully set/stop fire on zombie.
+ *				false | If returned 1 in ze_fire_pre() forward.
+ *						Mean if fire action stopped by the pre forward.
+ *				-1	  | If this zombie not alive.
+ *
+ * @note		If zombie fired right now, you can use this to stop the fire
+ *				imediatly by using: ze_set_fire_grenade(id, false)
+ *				Same you can fire him at anytime.
+ *				Always check if user alive or not when using this native.
+ *				This will throw error in case of invalid player.
+ *				You can also set fire on alive humans.
+ *
+ */
+native ze_set_fire_grenade_ex(id, delay);
+
 /*
 * Description:	Tells you if this zombie burning now or not.
 *
