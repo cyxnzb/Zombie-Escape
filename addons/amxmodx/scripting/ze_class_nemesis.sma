@@ -39,10 +39,8 @@ new bool:g_bNemesisFrost
 new bool:g_bNemesisFire
 new bool:g_bNemesisNvgAuto
 new bool:g_bIsNemesis[MAX_PLAYERS+1]
-new Float:g_flNemesisFrostFreeze
 new Float:g_flNemesisMultiDamage
 new Float:g_flNemesisKnockback
-new Float:g_flNemesisKnockbackDuck
 
 // Dynamic Array.
 new Array:g_aNemesisModel
@@ -86,8 +84,6 @@ public plugin_init()
 	bind_pcvar_num(create_cvar("ze_nemesis_explode", "1"), g_bNemesisExplode)
 	bind_pcvar_float(create_cvar("ze_nemesis_damage", "2.0"), g_flNemesisMultiDamage)
 	bind_pcvar_float(create_cvar("ze_nemesis_knockback", "200"), g_flNemesisKnockback)
-	bind_pcvar_float(create_cvar("ze_nemesis_knockback_duck", "200"), g_flNemesisKnockbackDuck)
-	bind_pcvar_float(create_cvar("ze_nemesis_frost_duration", "2"), g_flNemesisFrostFreeze)
 
 	new pCvarNemesisNvgColors[Colors]
 	new pCvarNemesisNvg = create_cvar("ze_nemesis_nightvision", "1")
@@ -304,7 +300,7 @@ public set_User_Nemesis(id)
 		set_task(0.1, "auraLight", (id+TASK_AURALIGHT), "", 0, "b") // New task for display dynamic light.
 
 	// Set nemesis custom Knockback.
-	ze_set_user_knockback(id, g_flNemesisKnockback, g_flNemesisKnockbackDuck)
+	ze_set_user_knockback(id, g_flNemesisKnockback)
 
 	// Local Variable.
 	new szModel[MAX_MODEL_LENGTH]
