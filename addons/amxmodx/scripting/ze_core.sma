@@ -37,6 +37,8 @@ new g_iRoundTime,
 	g_iHumansScore, 
 	g_iZombiesScore, 
 	g_iRoundNum,
+	g_iLastHuman,
+	g_iLastZombie,
 	g_iFreezeTime,
 	g_iRequiredPlayers,
 	g_iScoreMessageType,
@@ -48,17 +50,17 @@ new g_iRoundTime,
 	g_iZombieGravity,
 	g_iRoundTimeLeft,
 	g_iPainShockFree,
-	g_iHSpeedFactor[33],
-	g_iZSpeedSet[33],
-	g_iUserGravity[33],
+	g_iHSpeedFactor[MAX_PLAYERS+1],
+	g_iZSpeedSet[MAX_PLAYERS+1],
+	g_iUserGravity[MAX_PLAYERS+1],
 	bool:g_bGameStarted, 
 	bool:g_bSkullGreenColor,
-	bool:g_bIsZombie[33],  
 	bool:g_bIsRoundEnding,
-	bool:g_bHSpeedUsed[33], 
-	bool:g_bZSpeedUsed[33],
-	bool:g_bIsGravityUsed[33],
-	bool:g_bRespawnAsZombie[33],
+	bool:g_bIsZombie[MAX_PLAYERS+1],  
+	bool:g_bHSpeedUsed[MAX_PLAYERS+1], 
+	bool:g_bZSpeedUsed[MAX_PLAYERS+1],
+	bool:g_bIsGravityUsed[MAX_PLAYERS+1],
+	bool:g_bRespawnAsZombie[MAX_PLAYERS+1],
 	Float:g_flReferenceTime,
 	Float:g_flZombieSpeed,
 	Float:g_flHumanSpeedFactor,
@@ -92,6 +94,12 @@ public plugin_natives()
 
 	register_native("ze_allow_respawn_as_zombie", "native_ze_allow_respawn_as_zombie", 1)
 	register_native("ze_disallow_respawn_as_zombie", "native_ze_disallow_respawn_as_zombie", 1)
+
+	register_native("ze_get_last_human", "native_get_last_human", 1)
+	register_native("ze_get_last_zombie", "native_get_last_zombie", 1)
+
+	register_native("ze_is_user_last_human", "native_is_user_last_human", 1)
+	register_native("ze_is_user_last_zombie", "native_is_user_last_zombie", 1)
 }
 
 public plugin_init()
@@ -238,6 +246,9 @@ public Fw_CheckMapConditions_Post()
 // Hook called after player killed.
 public Fw_PlayerKilled_Post(id)
 {
+	// Check last Player.
+	checkLastPlayer()
+
 	// Nobody alive?
 	if (!GetAlivePlayersNum(CS_TEAM_T) && !GetAlivePlayersNum(CS_TEAM_CT))
 	{
@@ -495,7 +506,14 @@ public client_disconnected(id)
 	g_bZSpeedUsed[id] = false
 	g_bIsGravityUsed[id] = false
 	g_iUserGravity[id] = 0
+
+	// Last player disconnected?
+	if (g_iLastHuman == id) g_iLastHuman = 0
+	if (g_iLastZombie == id) g_iLastZombie = 0
 	
+	// Check last player.
+	checkLastPlayer()
+
 	// Execute our disconnected forward
 	ExecuteForward(g_iForwards[FORWARD_DISCONNECT], g_iForwards[FORWARD_RESULT], id)
 	
@@ -636,6 +654,49 @@ public Message_Teamscore()
 	}
 }
 
+public checkLastPlayer()
+{
+	new id = 0
+
+	// Last human?
+	if (GetAlivePlayersNum(CS_TEAM_CT) == 1)
+	{
+		for (id = 1; id <= MaxClients; id++)
+		{
+			// Player not found?
+			if (!is_user_alive(id))
+				continue
+
+			// Player isn't Zombie?
+			if (!g_bIsZombie[id])
+				g_iLastHuman = id
+		}
+	}
+	else
+	{
+		g_iLastHuman = 0 // There is no last Human.
+	}
+
+	// Last zombie?
+	if (GetAlivePlayersNum(CS_TEAM_T) == 1)
+	{
+		for (new id = 0; id <= MaxClients; id++)
+		{
+			// Player not found?
+			if (!is_user_alive(id))
+				continue
+
+			// Player is Zombie?
+			if (g_bIsZombie[id])
+				g_iLastZombie = id
+		}
+	}
+	else
+	{
+		g_iLastZombie = 0 // There is no last Zombie.
+	}
+}
+
 /**
  * Private functions:
  */
@@ -669,6 +730,8 @@ Set_User_Human(id)
 		rg_set_user_team(id, TEAM_CT, MODEL_UNASSIGNED)
 	}
 
+	// Check last Player.
+	checkLastPlayer()
 	return true
 }
 
@@ -718,6 +781,8 @@ Set_User_Zombie(id, iAttacker = 0, Float:flDamage = 0.0)
 		rg_set_user_team(id, TEAM_TERRORIST, MODEL_UNASSIGNED)
 	}
 	
+	// Check last Player.
+	checkLastPlayer()
 	return true
 }
 
@@ -978,4 +1043,36 @@ public native_ze_disallow_respawn_as_zombie(id)
 
 	g_bRespawnAsZombie[id] = false
 	return true
+}
+
+public native_get_last_human()
+{
+	// Return true or false.
+	return g_iLastHuman
+}
+
+public native_get_last_zombie()
+{	
+	// Return true or false.
+	return g_iLastZombie
+}
+
+public bool:native_is_user_last_human(id)
+{
+	// Player not found or Is Zombie?
+	if (!is_user_alive(id) || g_bIsZombie[id])
+		return false
+	
+	// Return true or false.
+	return (g_iLastHuman == id)
+}
+
+public bool:native_is_user_last_zombie(id)
+{
+	// Player not found or Is not Zombie?
+	if (!is_user_alive(id) || !g_bIsZombie[id])
+		return false
+	
+	// Return true or false.
+	return (g_iLastZombie == id)	
 }
