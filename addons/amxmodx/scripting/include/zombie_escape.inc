@@ -300,6 +300,26 @@ forward ze_gamemode_chosen_pre(game_id, bSkipCheck);
  */
 forward ze_gamemode_chosen(game_id);
 
+/**
+ * Description: Called when player become last Human.
+ *
+ * @param id 	Client index.
+ * 
+ * @noreturn
+ *
+ */
+forward ze_user_last_human(id);
+
+/**
+ * Description: Called when player become last Zombie.
+ *
+ * @param id 	Client index.
+ * 
+ * @noreturn
+ *
+ */
+forward ze_user_last_zombie(id);
+
 // Natives
 
 /*
@@ -1340,3 +1360,57 @@ native bool:ze_is_round_escape();
  */
 native bool:ze_is_round_nemesis();
 
+/**
+ * Description: Set player Leap (Long-Jump).
+ *
+ * @param id 			Client index.
+ * @param flForce 		Leap force.
+ * @param flHeight 		Leap height.
+ * @param flCooldown 	Leap cooldown.
+ *
+ * @return 				true 	| If set successfully.
+ *						false 	| If player not connected.
+ *		
+ * @error 				If player not connected.	
+ *		
+ */
+native ze_set_user_leap(id, Float:flForce, Float:flHeight, Float:flCooldown);
+
+/**
+ * Description: Remove player Leap (Long-Jump).
+ *
+ * @param id 	Client index.
+ *
+ * @return 		true 	| If removed successfully.
+ *				false 	| If player not connected.
+ *
+ * @error 		If player not connected.
+ *
+ */
+native ze_remove_user_leap(id);
+
+/**
+ * Description: Block the player use Leap in every team.
+ *
+ * @param id 	Client index.
+ *
+ * @return 		true 	| If blocked successfully.
+ *				false 	| If player not connected.
+ *				
+ * @error 		If player not connected.			
+ *				
+ */
+native ze_block_user_leap(id);
+
+/**
+ * Description: Unblock the player to use Leap for All teams.
+ *
+ * @param id 	Client index.
+ *
+ * @return 		true 	| If successfully.
+ *				false 	| If player not connected.
+ *				
+ * @error 		If player not connected.			
+ *				
+ */
+native ze_unblock_user_leap(id);
