@@ -38,9 +38,13 @@ new bool:g_bNemesisOneHit
 new bool:g_bNemesisFrost
 new bool:g_bNemesisFire
 new bool:g_bNemesisNvgAuto
+new bool:g_bNemesisLeap
 new bool:g_bIsNemesis[MAX_PLAYERS+1]
 new Float:g_flNemesisMultiDamage
 new Float:g_flNemesisKnockback
+new Float:g_flNemesisLeapForce
+new Float:g_flNemesisLeapHeight
+new Float:g_flNemesisLeapCooldown
 
 // Dynamic Array.
 new Array:g_aNemesisModel
@@ -84,6 +88,11 @@ public plugin_init()
 	bind_pcvar_num(create_cvar("ze_nemesis_explode", "1"), g_bNemesisExplode)
 	bind_pcvar_float(create_cvar("ze_nemesis_damage", "2.0"), g_flNemesisMultiDamage)
 	bind_pcvar_float(create_cvar("ze_nemesis_knockback", "200"), g_flNemesisKnockback)
+
+	bind_pcvar_num(create_cvar("ze_nemesis_leap", "1"), g_bNemesisLeap)
+	bind_pcvar_float(create_cvar("ze_nemesis_leap_force", "500"), g_flNemesisLeapForce)
+	bind_pcvar_float(create_cvar("ze_nemesis_leap_height", "300"), g_flNemesisLeapHeight)
+	bind_pcvar_float(create_cvar("ze_nemesis_leap_cooldown", "5.0"), g_flNemesisLeapCooldown)
 
 	new pCvarNemesisNvgColors[Colors]
 	new pCvarNemesisNvg = create_cvar("ze_nemesis_nightvision", "1")
@@ -319,7 +328,14 @@ public set_User_Nemesis(id)
 	ze_set_user_weap_model(id, CSW_KNIFE, "")
 
 	// Set player Night Vision.
-	ze_set_user_nvg(id, g_iNemesisNvgColors[Red], g_iNemesisNvgColors[Green], g_iNemesisNvgColors[Blue], g_iNemesisNvgDensity, g_bNemesisNvgAuto)
+	if (g_bNemesisNvg)
+		ze_set_user_nvg(id, g_iNemesisNvgColors[Red], g_iNemesisNvgColors[Green], g_iNemesisNvgColors[Blue], g_iNemesisNvgDensity, g_bNemesisNvgAuto)
+
+	// Set player Leap.
+	if (g_bNemesisLeap)
+		ze_set_user_leap(id, g_flNemesisLeapForce, g_flNemesisLeapHeight, g_flNemesisLeapCooldown)
+	else
+		ze_block_user_leap(id) // Don't set player Zombie leap.
 }
 
 public remove_User_Nemesis(id)
@@ -344,6 +360,12 @@ public remove_User_Nemesis(id)
 
 	// Remove player Night Vision.
 	ze_reset_user_nvg(id)
+
+	// Remove player Leap.
+	ze_remove_user_leap(id)
+
+	// Unlock player Leap.
+	ze_unblock_user_leap(id)
 }
 
 public auraLight(id)
