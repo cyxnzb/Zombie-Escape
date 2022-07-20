@@ -2,6 +2,7 @@
 NO_ENOUGH_PLAYERS = !tNo Enough Players!y. !tRequired!y: !t%i!y.
 RUN_NOTICE = Ready for Run. Run After %i Second(s) !
 ZOMBIE_RELEASE = Zombie(s) Will Be Released After: %i Second(s) !
+ZOMBIE_RELEASED = Zombie(s) has been released !!
 READY_TO_RUN = !tAre you Ready to Run!y? !gGood Luck !y:)
 ESCAPE_SUCCESS = Escape Success!
 ESCAPE_FAIL = Escape Fail!
@@ -35,6 +36,7 @@ HUMAN_LEADER_COMMAS = HP: %s | Class: Escape Leader | Escape Coins: %i
 HUMAN = HP: %i | Class: Human | Escape Coins: %i
 HUMAN_COMMAS = HP: %s | Class: Human | Escape Coins: %i
 
+BUY_MENU_DISABLED = !tBuy menu disabled!y!
 BUY_ENABLED = !tYour menu has been re-enabled!y.
 RE_ENABLE_MENU = !tsay /enable or press M to enable your buy menu!y.
 ALREADY_BOUGHT = !tYou already bought Primary and Secondary Weapons!y!
@@ -50,6 +52,8 @@ NEXT = Next
 BACK = Back
 EXIT = Exit
 
+LEVEL_NOT_ENOUGH = You don't have level enough !
+
 MAIN_MENU_TITLE = [ZE] Main Menu
 MENU_EXTRABUY = Buy Extra Items
 MENU_WEAPONBUY = Buy Weapons
@@ -63,11 +67,13 @@ ITEM_LEVEL = \w[\rLevel\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
 NOTICE_ESCAPE = Zombies Appeared^nRun!!
+NOTICE_NEMESIS = Danger^n! Nemesis !
 
 [bp]
 NO_ENOUGH_PLAYERS = !tFalta jogadores!y. !tNecessario!y: !t%i!y.
 RUN_NOTICE = Pronto pra Fugir?. Falta apenas %i segundos !
 ZOMBIE_RELEASE = Zumbis liberados em: %i Segundos !
+ZOMBIE_RELEASED = Os zumbies apareceram
 READY_TO_RUN = !tPronto para fugir!y? !gBoa Sorte !y:)
 ESCAPE_SUCCESS = Fugiram com sucesso!
 ESCAPE_FAIL = Falharam na fuga!
@@ -101,6 +107,7 @@ HUMAN_LEADER_COMMAS = HP: %s | Classe: Lider da Fuga | Escape Coins: %i
 HUMAN = HP: %i | Classe: Humano | Escape Coins: %i
 HUMAN_COMMAS = HP: %s | Classe: Humano | Escape Coins: %i
 
+BUY_MENU_DISABLED = O menu de comprar foi desativado
 BUY_ENABLED = !tSeu menu foi reativado!y.
 RE_ENABLE_MENU = !tdigite /enable ou aperte M para ativar seu menu de compras!y.
 ALREADY_BOUGHT = !tVocê já comprou Armas Primárias e Secundárias!y!
@@ -116,6 +123,8 @@ NEXT = Proximo
 BACK = Volta
 EXIT = Sair
 
+LEVEL_NOT_ENOUGH = Você não tem nivel suficiente
+
 MAIN_MENU_TITLE = [ZE] Menu Principal
 MENU_EXTRABUY = Comprar Itens Especiais
 MENU_WEAPONBUY = Comprar Armas
@@ -129,11 +138,13 @@ ITEM_LEVEL = \w[\rLevel\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
 NOTICE_ESCAPE = Zombies apareceram^nfujam!!
+NOTICE_NEMESIS = Perigo^n! Nêmesis !
 
 [pl]
 NO_ENOUGH_PLAYERS = !tBrak wystarczjacej liczby graczy!y. !tWymagana liczba!y: !t%i!y.
 RUN_NOTICE = Gotowy do ucieczki. Biegnij po %i sekundach !
 ZOMBIE_RELEASE = Zombie zostanie wypuszczone za: %i sekund !
+ZOMBIE_RELEASED = Zombie zostalo wypuszczone !!
 READY_TO_RUN = !tGotowy do ucieczki!y? !gPOWODZENIA !y:)
 ESCAPE_SUCCESS = Udana ucieczka!
 ESCAPE_FAIL = Nieudana ucieczka!
@@ -167,6 +178,7 @@ HUMAN_LEADER_COMMAS = HP: %s | Klasa: Escape Lider | Ilosc monet: %i
 HUMAN = HP: %i | Klasa: Czlowiek | Ilosc monet: %i
 HUMAN_COMMAS = HP: %s | Class: Human | Escape Coins: %i
 
+BUY_MENU_DISABLED = !tMenu kupowania wylaczone!y!
 BUY_ENABLED = !tYour menu has been re-enabled!y.
 RE_ENABLE_MENU = !tsay /enable or press M to enable your buy menu!y.
 ALREADY_BOUGHT = !tJuz kupiles bron!y!
@@ -182,6 +194,8 @@ NEXT = Nastepny
 BACK = Powrot
 EXIT = Wyjscie
 
+LEVEL_NOT_ENOUGH = Masz za niski level !
+
 MAIN_MENU_TITLE = [ZE] Glowne Menu
 MENU_EXTRABUY = Kup dodatkowe przedmioty
 MENU_WEAPONBUY = Kup bronie
@@ -194,12 +208,14 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rPoziom\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
-NOTICE_ESCAPE = Pojawiły się zombie^nBiegać
+NOTICE_ESCAPE = Pojawilo sie Zombie^nUciekaj!!
+NOTICE_NEMESIS = Uwaga^n! Nemesis !
 
 [bs]
 NO_ENOUGH_PLAYERS = !tNema dovoljno igraca!y. !tPotrebno!y: !t%i!y.
 RUN_NOTICE = Spremite se za bijeg. Bjezite nakon %i sekundi !
 ZOMBIE_RELEASE = Zombiji ce biti pusteni nakon: %i sekundi !
+ZOMBIE_RELEASED = Zombiji su pusteni!
 READY_TO_RUN = !tDa li ste spremni!y? !gSRETNO !y:)
 ESCAPE_SUCCESS = Uspjesan bijeg!
 ESCAPE_FAIL = Neuspjesan bijeg!
@@ -233,6 +249,7 @@ HUMAN_LEADER_COMMAS = HP: %s | Klasa: Lider bijega | Broj kovanica: %i
 HUMAN = HP: %i | Vrsta: Covjek | Broj kovanica: %i
 HUMAN_COMMAS = HP: %s | Vrsta: Covjek | Broj kovanica: %i
 
+BUY_MENU_DISABLED = !tBuy menu je iskljucen!y!
 BUY_ENABLED = !tPonovo ste aktivirali meni za odabir oruzja!y.
 RE_ENABLE_MENU = !tnapisite /enable ili pritisnite slovo M da aktivirate meni za odabir oruzja!y.
 ALREADY_BOUGHT = !tVec ste odabrali svoje oruzje!y!
@@ -248,6 +265,8 @@ NEXT = Sljedece
 BACK = Povratak
 EXIT = Izlaz
 
+LEVEL_NOT_ENOUGH = Nemas dovoljno visok level!
+
 MAIN_MENU_TITLE = [ZE] Glavni Meni
 MENU_EXTRABUY = Kupite dodatke
 MENU_WEAPONBUY = Odaberite oruzje
@@ -260,12 +279,14 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rLevel\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
-NOTICE_ESCAPE = Zombiji su se pojavili^nbježi!!
+NOTICE_ESCAPE = Zombiji su se pojavili^nBjezi!
+NOTICE_NEMESIS = Opasnost^n! Nemesis!
 
 [tr]
 NO_ENOUGH_PLAYERS = !tYeterli Oyuncular Yok!y.  !t%i Gereklidir!y.
 RUN_NOTICE = Kacmaya Hazir Ol. %i Saniye Sonra Kac !
 ZOMBIE_RELEASE = Zombiler: %i Saniye Sonra Serbest Edilecekler !
+ZOMBIE_RELEASED = Zombie(ler) serbest bırakıldı !!
 READY_TO_RUN = !tKacmaya Hazirmisin!y? !gIyi Sanslar !y:)
 ESCAPE_SUCCESS = Kacis Basarili!
 ESCAPE_FAIL = Kacis Basarisiz!
@@ -299,6 +320,7 @@ HUMAN_LEADER_COMMAS = Saglik: %s | Sinif: Escape Leader | Kacis Paralar: %i
 HUMAN = Saglik: %i | Sinif: Human | Kacis Paralar: %i
 HUMAN_COMMAS = Saglik: %s | Sinif: Human | Kacis Paralar: %i
 
+BUY_MENU_DISABLED = !tSatın alım menusu devre dışı bırakıldı!y!
 BUY_ENABLED = !tSenin menu'n bir daha Etkinlesmis!y.
 RE_ENABLE_MENU = !tMenu'yu bir daha Etkinlestirmek icin /enable yaz yada M'ye bas!y.
 ALREADY_BOUGHT = !tSen gercekten bir silah Almissin!y!
@@ -314,6 +336,8 @@ NEXT = Sonraki
 BACK = Onceki
 EXIT = Exit
 
+LEVEL_NOT_ENOUGH = Yeterli Leveliniz bulunmamaktadır !
+
 MAIN_MENU_TITLE = [ZE] Ana Menu
 MENU_EXTRABUY = Extra Ogeler Al
 MENU_WEAPONBUY = Silah Al
@@ -327,6 +351,7 @@ ITEM_LEVEL = \w[\rSeviye\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
 NOTICE_ESCAPE = Zombiler ortaya çıktı^nKoşun!!
+NOTICE_NEMESIS = Dikkat^n! Nemesis !
 
 [ru]
 NO_ENOUGH_PLAYERS = !tНедостаточно игроков!y. !tНужно!y: !t%i!y.
@@ -365,6 +390,7 @@ HUMAN_LEADER_COMMAS = HP: %s | Класс: Лидер Побега | Монет:
 HUMAN = HP: %i | Класс: Человек | Монет: %i
 HUMAN_COMMAS = HP: %s | Класс: Человек | Монет: %i
 
+BUY_MENU_DISABLED = 
 BUY_ENABLED = !tВаше МЕНЮ было восстановлено!y.
 RE_ENABLE_MENU = !tнапиши в чате /enable или нажми M чтобы включить МЕНЮ!y.
 ALREADY_BOUGHT = !tТы уже купил Оружие!y!
@@ -380,6 +406,8 @@ NEXT = След
 BACK = Назад
 EXIT = Выход
 
+LEVEL_NOT_ENOUGH = 
+
 MAIN_MENU_TITLE = [ZE] Главное меню
 MENU_EXTRABUY = Купить Экстра-Предметы
 MENU_WEAPONBUY = Купить Оружие
@@ -393,11 +421,13 @@ ITEM_LEVEL = \w[\rУровень\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
 NOTICE_ESCAPE = Появились зомби^nБежать!!
+NOTICE_NEMESIS = 
 
 [ro]
 NO_ENOUGH_PLAYERS = !tPrea putini jucatori!y. !tJucatori necesari!y: !t%i!y.
 RUN_NOTICE = Fiti gata pentru evadare. Fugiti Dupa %i Secunde !
 ZOMBIE_RELEASE = Zombii Vor fi eliberati peste: %i Secunde !
+ZOMBIE_RELEASED = Zombii au fost eliberati !!
 READY_TO_RUN = !tEsti gata pentru fuga!y? !gMult noroc !y:)
 ESCAPE_SUCCESS = Evadare cu Succes!
 ESCAPE_FAIL = Evadare Esuata!
@@ -431,6 +461,7 @@ HUMAN_LEADER_COMMAS = HP: %s | Clasa: Liderul Evadarii | Escape Coins: %i
 HUMAN = HP: %i | Clasa: Om | Escape Coins: %i
 HUMAN_COMMAS = HP: %s | Clasa: Om | Escape Coins: %i
 
+BUY_MENU_DISABLED = !tBuy menu este dezactivat momentan!y!
 BUY_ENABLED = !tMeniul tau a fost reactivat!y.
 RE_ENABLE_MENU = !tTasteaza in chat /enable sau apasa tasta M pentru a reactiva Meniul Pentru Arme!y.
 ALREADY_BOUGHT = !tDeja ti-ai cumparat armele Secundare si Primare!y!
@@ -446,6 +477,8 @@ NEXT = Urmatorul
 BACK = Inapoi
 EXIT = Iesire
 
+LEVEL_NOT_ENOUGH = Nu ai nivelul necesar !
+
 MAIN_MENU_TITLE = [ZE] Meniul principal
 MENU_EXTRABUY = Cumpara Obiecte Extra
 MENU_WEAPONBUY = Cumpara Arme
@@ -458,4 +491,5 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rNivel\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
-NOTICE_ESCAPE = Au apărut zombi^nAlerga
+NOTICE_ESCAPE = Zombii au aparut^nFugi!!
+NOTICE_NEMESIS = Pericol^n! Nemesis !
