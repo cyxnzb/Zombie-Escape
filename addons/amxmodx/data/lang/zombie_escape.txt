@@ -357,6 +357,7 @@ NOTICE_NEMESIS = Dikkat^n! Nemesis !
 NO_ENOUGH_PLAYERS = !tНедостаточно игроков!y. !tНужно!y: !t%i!y.
 RUN_NOTICE = Все готовы. Забег начинается через %i секунд !
 ZOMBIE_RELEASE = Первые зомби через: %i секунд !
+ZOMBIE_RELEASED = зомби отпустили !!
 READY_TO_RUN = !tВы готовы!y? !gУдачи !y:)
 ESCAPE_SUCCESS = Побег осуществлен!
 ESCAPE_FAIL = Побег провалился!
@@ -390,7 +391,7 @@ HUMAN_LEADER_COMMAS = HP: %s | Класс: Лидер Побега | Монет:
 HUMAN = HP: %i | Класс: Человек | Монет: %i
 HUMAN_COMMAS = HP: %s | Класс: Человек | Монет: %i
 
-BUY_MENU_DISABLED = 
+BUY_MENU_DISABLED = !Меню невозможно купить, меню отключили!у !
 BUY_ENABLED = !tВаше МЕНЮ было восстановлено!y.
 RE_ENABLE_MENU = !tнапиши в чате /enable или нажми M чтобы включить МЕНЮ!y.
 ALREADY_BOUGHT = !tТы уже купил Оружие!y!
@@ -406,7 +407,7 @@ NEXT = След
 BACK = Назад
 EXIT = Выход
 
-LEVEL_NOT_ENOUGH = 
+LEVEL_NOT_ENOUGH = вы не достигли уровня !
 
 MAIN_MENU_TITLE = [ZE] Главное меню
 MENU_EXTRABUY = Купить Экстра-Предметы
@@ -420,8 +421,8 @@ ITEM_LIMIT = \w[\r%i\d|\r%i\w]
 ITEM_LEVEL = \w[\rУровень\d: \r%i\w]
 ITEM_VIP = \w(\rVIP\w)
 
-NOTICE_ESCAPE = Появились зомби^nБежать!!
-NOTICE_NEMESIS = 
+NOTICE_ESCAPE = появились зомби, надо бежать!!
+NOTICE_NEMESIS = мы в опасности^н, появился Заклятый враг !
 
 [ro]
 NO_ENOUGH_PLAYERS = !tPrea putini jucatori!y. !tJucatori necesari!y: !t%i!y.
