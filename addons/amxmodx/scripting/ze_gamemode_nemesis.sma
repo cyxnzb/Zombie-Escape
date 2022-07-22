@@ -79,6 +79,19 @@ public plugin_precache()
 		// Store default start sound in externel file.
 		amx_save_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "Nemesis Mode", g_aStartSound)
 	}
+
+	new szSound[MAX_SOUND_LENGTH], iArrSize
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_aStartSound)
+
+	for (iNum = 0; iNum < iArrSize; iNum++)
+	{
+		ArrayGetString(g_aStartSound, iNum, szSound, charsmax(szSound))
+		
+		format(szSound, charsmax(szSound), "sound/%s", szSound)
+		precache_generic(szSound)
+	}
 }
 
 // Forward called before game started.

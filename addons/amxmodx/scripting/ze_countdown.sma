@@ -47,6 +47,19 @@ public plugin_precache()
 		// Save values stored in Array to External file
 		amx_save_setting_string_arr(ZE_SETTING_RESOURCES, "Sounds", "COUNT DOWN", g_szCountDownSound)
 	}
+
+	new szSound[MAX_SOUND_LENGTH], iArrSize
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szCountDownSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
+	{
+		ArrayGetString(g_szCountDownSound, iIndex, szSound, charsmax(szSound))
+		
+		format(szSound, charsmax(szSound), "sound/%s", szSound)
+		precache_generic(szSound)
+	}
 }
 
 public plugin_init()

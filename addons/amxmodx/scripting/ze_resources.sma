@@ -266,6 +266,72 @@ public plugin_precache()
 		}
 	}
 
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szReadySound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
+	{
+		ArrayGetString(g_szReadySound, iIndex, szSound, charsmax(szSound))
+		
+		format(szSound, charsmax(szSound), "sound/%s", szSound)
+		precache_generic(szSound)
+	}
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szComingSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
+	{
+		ArrayGetString(g_szComingSound, iIndex, szSound, charsmax(szSound))
+		
+		format(szSound, charsmax(szSound), "sound/%s", szSound)
+		precache_generic(szSound)
+	}
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szPreReleaseSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
+	{
+		ArrayGetString(g_szPreReleaseSound, iIndex, szSound, charsmax(szSound))
+		
+		format(szSound, charsmax(szSound), "sound/%s", szSound)
+		precache_generic(szSound)
+	}
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szAmbianceSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
+	{
+		ArrayGetString(g_szAmbianceSound, iIndex, szSound, charsmax(szSound))
+		
+		format(szSound, charsmax(szSound), "sound/%s", szSound)
+		precache_generic(szSound)
+	}
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szEscapeSuccessSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
+	{
+		ArrayGetString(g_szEscapeSuccessSound, iIndex, szSound, charsmax(szSound))
+		
+		format(szSound, charsmax(szSound), "sound/%s", szSound)
+		precache_generic(szSound)
+	}
+
+	// Get number of sounds in dynamic array.
+	iArrSize = ArraySize(g_szEscapeFailSound)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
+	{
+		ArrayGetString(g_szEscapeFailSound, iIndex, szSound, charsmax(szSound))
+		
+		format(szSound, charsmax(szSound), "sound/%s", szSound)
+		precache_generic(szSound)
+	}
+
 	// Sound Durations
 	if (!amx_load_setting_int(ZE_SETTING_RESOURCES, "Sound Durations", "Ready Sound", g_iReadySoundDuration))
 		amx_save_setting_int(ZE_SETTING_RESOURCES, "Sound Durations", "Ready Sound", g_iReadySoundDuration)
