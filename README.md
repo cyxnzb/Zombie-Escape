@@ -1,7 +1,7 @@
 
 # Zombie Escape Mod
 
-[![Mod](https://img.shields.io/badge/Version-1.7-white.svg)](https://escapers-zone.net/viewtopic.php?f=6&t=6)
+[![Mod](https://img.shields.io/badge/Version-1.7-white.svg)](https://github.com/raheem-cs/Zombie-Escape/archive/refs/heads/master.zip)
 
 # Description:
 
